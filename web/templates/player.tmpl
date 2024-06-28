@@ -1,0 +1,55 @@
+<div class="player-details">
+  <h1>{{ .FirstName }} {{ .LastName }}</h1>
+  {{ if .Nickname1 }}
+    <h2>{{ .Nickname1 }}
+  {{ end }}
+  <div>
+    {{ if .Team }}
+      <div>Team: {{ .Team.Friendly }}</div>
+    {{ end }}
+    {{ if .Position }}
+      <div>Position: {{ .Position }}</div>
+    {{ end }}
+    {{ if gt .DepthChartOrder 0 }}
+      <div>Depth Chart Order: {{ .DepthChartOrder }}</div>
+    {{ end }}
+    {{ if gt .Jersey 0 }}
+      <div>Jersey Number: {{ .Jersey }}</div>
+    {{ end }}
+    {{ if gt .Weight 0 }}
+      <div>Weight: {{ .Weight }} pounds</div>
+    {{ end }}
+    {{ if gt .Height 0 }}
+      <div>Height: {{ .Height|height }}</div>
+    {{ end }}
+    {{ if .BirthDate }}
+      <div>Birthday: {{ .BirthDate|age }}</div>
+    {{ end }}
+    {{ if .RookieYear }}
+      <div>Rookie Year: {{ .RookieYear|year }}</div>
+    {{ end }}
+    {{ if gt .YearsExp 0 }}
+      <div>Years Experience: {{ .YearsExp }}</div>
+    {{ end }}
+    {{ if .College }}
+      <div>College: {{ .College }}</div>
+    {{ end }}
+    {{ if .Active }}
+      <div>Status: Active</div>
+    {{ else }}
+      <div>Status: Inactive</div>
+    {{ end }}
+
+    {{ if .Changes }}
+      <div>Changes</div>
+      <ul>
+        {{ range $c := .Changes }}
+          <li>{{ $c.String }} on {{ $c.Time|date }}</li>
+        {{ end }}
+      </ul>
+      <div>Last updated: {{ .Updated|date }}</div>
+    {{ else }}
+      <div>Last updated: {{ .Created|date }}</div>
+    {{ end }}
+  </div>
+</div>
