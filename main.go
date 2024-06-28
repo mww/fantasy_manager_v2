@@ -6,10 +6,12 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/itbasis/go-clock"
+	"github.com/joho/godotenv"
 	"github.com/mww/fantasy_manager_v2/controller"
 	"github.com/mww/fantasy_manager_v2/db"
 	"github.com/mww/fantasy_manager_v2/sleeper"
@@ -17,8 +19,23 @@ import (
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil && !os.IsNotExist(err) {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+	connString := os.Getenv("POSTGRES_CONN_STR")
+
+	portNum := 3000 // 3000 is the default
+	port := os.Getenv("PORT")
+	if port != "" {
+		portNum, err = strconv.Atoi(port)
+		if err != nil {
+			log.Fatalf("error parsing port number: %v", err)
+		}
+	}
+
 	clock := clock.New()
-	db, err := db.New(context.Background(), "postgresql://ffuser:secret@localhost:5433/fantasy_manager", clock)
+	db, err := db.New(context.Background(), connString, clock)
 	if err != nil {
 		log.Fatalf("cannot connect to DB: %v", err)
 	}
@@ -33,7 +50,7 @@ func main() {
 		log.Fatalf("error creating a new controller: %v", err)
 	}
 
-	server, err := web.NewServer(3000, ctrl)
+	server, err := web.NewServer(portNum, ctrl)
 	if err != nil {
 		log.Fatalf("error creating new web server: %v", err)
 	}

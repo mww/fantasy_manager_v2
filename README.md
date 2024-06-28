@@ -17,3 +17,7 @@ To connect to psql for the running database server
 ```
 docker exec -it fantasy-manager-db psql -U ffuser fantasy_manager
 ```
+
+Be sure to look at `.env.sample`. You need to set POSTGRES_CONN_STR either
+as an environment variable or in your `.env` file before you can run the
+server.

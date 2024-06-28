@@ -1,2 +1,5 @@
 # Don't include the binary
 fantasy_manager_v2
+
+# Don't include .env files
+.env
