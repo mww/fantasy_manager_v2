@@ -11,7 +11,7 @@ RUN go mod download
 # For now ignore the tests in ./db because they use testcontainers and that
 # wasn't working with a simple `go test ./...`
 RUN CGO_ENABLED=0 go test ./controller/... ./model/... ./sleeper/... ./web/...
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o sonos_scenes
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o fantasy_manager_v2
 
 FROM --platform=${TARGETPLATFORM:-linux/amd64} scratch
 WORKDIR /app/
