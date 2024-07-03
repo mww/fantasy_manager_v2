@@ -29,6 +29,7 @@ func getRouter(ctrl *controller.C, render *render.Render) *chi.Mux {
 		// the search if it is.
 		r.Get("/", playerSearchHandler(ctrl, render))
 		r.Get("/{playerID:\\d+}", getPlayerHandler(ctrl, render))
+		r.Post("/{playerID:\\d+}", updatePlayerHandler(ctrl, render))
 	})
 
 	r.Route("/admin", func(r chi.Router) {

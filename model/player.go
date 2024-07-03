@@ -67,5 +67,5 @@ type Change struct {
 }
 
 func (c *Change) String() string {
-	return fmt.Sprintf("%s changed from %s to %s", c.PropertyName, c.OldValue, c.NewValue)
+	return fmt.Sprintf("%s changed from '%s' to '%s'", c.PropertyName, c.OldValue, c.NewValue)
 }
