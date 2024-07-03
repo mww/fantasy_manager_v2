@@ -74,17 +74,41 @@ func (db *postgresDB) SavePlayer(ctx context.Context, p *model.Player) error {
 	return nil
 }
 
-func (db *postgresDB) Search(ctx context.Context, q string) ([]model.Player, error) {
+func (db *postgresDB) Search(ctx context.Context, q string, pos model.Position, team *model.NFLTeam) ([]model.Player, error) {
 	const query = `SELECT id, yahoo_id, name_first, name_last, nickname1,
 				  		position, team, weight_lb, height_in, birth_date,
 						rookie_year, years_exp, jersey_num, depth_chart_order,
 						college, active, created, updated
-					FROM players WHERE fts_player @@ to_tsquery(@q)`
+					FROM players WHERE fts_player @@ websearch_to_tsquery(@q)
+						AND team ILIKE @team
+						AND position ILIKE @pos`
+
+	const teamAndPosQuery = `SELECT id, yahoo_id, name_first, name_last, nickname1,
+					    		position, team, weight_lb, height_in, birth_date,
+					  			rookie_year, years_exp, jersey_num, depth_chart_order,
+					  			college, active, created, updated
+				  			FROM players WHERE team ILIKE @team AND position ILIKE @pos`
+
+	teamQ := "%"
+	if team != nil {
+		teamQ = team.String()
+	}
+	posQ := "%"
+	if pos != model.POS_UNKNOWN {
+		posQ = string(pos)
+	}
 
 	args := pgx.NamedArgs{
-		"q": q,
+		"q":    q,
+		"team": teamQ,
+		"pos":  posQ,
 	}
-	rows, err := db.pool.Query(ctx, query, args)
+
+	qq := query
+	if q == "" {
+		qq = teamAndPosQuery
+	}
+	rows, err := db.pool.Query(ctx, qq, args)
 	if err != nil {
 		return nil, fmt.Errorf("error running search query: %w", err)
 	}

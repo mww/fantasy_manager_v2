@@ -3,3 +3,6 @@ fantasy_manager_v2
 
 # Don't include .env files
 .env
+
+# Don't need these Mac specific files
+.DS_Store
