@@ -14,6 +14,7 @@ RUN CGO_ENABLED=0 go test ./controller/... ./model/... ./sleeper/... ./web/...
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o fantasy_manager_v2
 
 FROM --platform=${TARGETPLATFORM:-linux/amd64} scratch
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 WORKDIR /app/
 COPY --from=builder /app/fantasy_manager_v2 /app/fantasy_manager_v2
 

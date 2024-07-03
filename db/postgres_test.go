@@ -155,13 +155,15 @@ func TestDB_search(t *testing.T) {
 	err := c.db.SavePlayer(ctx, p)
 	assertFatalf(t, err == nil, "error saving player: %v", err)
 
-	players, err := c.db.Search(ctx, "Tyler")
+	players, err := c.db.Search(ctx, "Tyler", model.POS_UNKNOWN, nil)
 	assertFatalf(t, err == nil, "error searching for player: %v", err)
 	assertEquals(t, "num players found", 1, len(players))
 
-	players, err = c.db.Search(ctx, "Frank")
+	players, err = c.db.Search(ctx, "Frank", model.POS_UNKNOWN, nil)
 	assertFatalf(t, err == nil, "error searching for players: %v", err)
 	assertEquals(t, "num players found 2", 0, len(players))
+
+	// TODO: add tests for searching by position and team
 }
 
 func getPlayer() *model.Player {

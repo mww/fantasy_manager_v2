@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/mww/fantasy_manager_v2/controller"
 	"github.com/mww/fantasy_manager_v2/db"
+	"github.com/mww/fantasy_manager_v2/model"
 	"github.com/unrolled/render"
 )
 
@@ -19,7 +20,23 @@ func rootHandler(ctrl *controller.C, render *render.Render) http.HandlerFunc {
 
 func playerSearchHandler(ctrl *controller.C, render *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		render.Text(w, http.StatusOK, "search page here")
+		query := r.URL.Query().Get("q")
+
+		var err error
+		var results []model.Player = nil
+		if query != "" {
+			results, err = ctrl.Search(r.Context(), query)
+			if err != nil {
+				render.HTML(w, http.StatusInternalServerError, "500", err.Error())
+				return
+			}
+		}
+
+		data := map[string]any{
+			"q":       query,
+			"results": results,
+		}
+		render.HTML(w, http.StatusOK, "playerSearch", data)
 	}
 }
 

@@ -1,0 +1,14 @@
+<div class="search">
+  <form id="search" method="get" action="/players">
+    <input type="text" id="q" name="q" value="{{ .q }}" />
+    <input type="submit" value="Search" />
+  </form>
+</div>
+
+{{ if .results }}
+<div id="search-results">
+  {{ range $p := .results }}
+    <div><a href="/players/{{ $p.ID }}">{{ $p.FirstName }} {{ $p.LastName }} - {{ $p.Position }} {{ $p.Team }}</a></div>
+  {{ end }}
+</div>
+{{ end }}
