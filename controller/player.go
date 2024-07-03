@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"regexp"
@@ -21,9 +22,30 @@ func (c *C) Search(ctx context.Context, query string) ([]model.Player, error) {
 	q, team := getTeamFromQuery(q)
 
 	if pos == model.POS_UNKNOWN && team == nil && q == "" {
-		return nil, fmt.Errorf("error not a valid query: '%s", query)
+		return nil, fmt.Errorf("error not a valid query: '%s'", query)
 	}
 	return c.db.Search(ctx, q, pos, team)
+}
+
+// Updates a player's nickname, or deletes it if the nickname == ""
+// Returns an error if not successful, nil otherwise.
+func (c *C) UpdatePlayerNickname(ctx context.Context, id, nickname string) error {
+	p, err := c.db.GetPlayer(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if p.Nickname1 == nickname {
+		return errors.New("no updated needed")
+	}
+
+	// Delete the nickname
+	if nickname == "" {
+		return c.db.DeleteNickname(ctx, id, p.Nickname1)
+	}
+
+	p.Nickname1 = nickname
+	return c.db.SavePlayer(ctx, p)
 }
 
 func (c *C) UpdatePlayers(ctx context.Context) error {

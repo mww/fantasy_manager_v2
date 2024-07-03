@@ -57,6 +57,39 @@ func getPlayerHandler(ctrl *controller.C, render *render.Render) http.HandlerFun
 	}
 }
 
+func updatePlayerHandler(ctrl *controller.C, render *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", err.Error())
+			return
+		}
+
+		playerID := chi.URLParam(r, "playerID")
+
+		updating := r.PostForm.Get("update")
+		if updating == "nickname" {
+			nn := r.PostForm.Get("nickname")
+			err := ctrl.UpdatePlayerNickname(r.Context(), playerID, nn)
+			if err != nil {
+				render.HTML(w, http.StatusInternalServerError, "500", err.Error())
+				return
+			}
+		} else {
+			render.HTML(w, http.StatusBadRequest, "400", fmt.Sprintf("unknown update type: %s", updating))
+			return
+		}
+
+		// Now fetch the updated player and render
+		p, err := ctrl.GetPlayer(r.Context(), playerID)
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err.Error())
+			return
+		}
+
+		render.HTML(w, http.StatusOK, "player", p)
+	}
+}
+
 func forceUpdatePlayers(ctrl *controller.C, render *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := ctrl.UpdatePlayers(r.Context()); err != nil {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -166,6 +167,81 @@ func TestDB_search(t *testing.T) {
 	// TODO: add tests for searching by position and team
 }
 
+func TestNicknames(t *testing.T) {
+	ctx := context.Background()
+
+	c := NewContainer()
+	defer c.Shutdown()
+
+	p := getPlayer()
+	p.Nickname1 = "" // Make sure no nickname to start
+
+	err := c.db.SavePlayer(ctx, p)
+	assertFatalf(t, err == nil, "error saving player: %v", err)
+
+	p1, err := c.db.GetPlayer(ctx, p.ID)
+	assertFatalf(t, err == nil, "error fetching player: %v", err)
+	assertEquals(t, "Nickname1", "", p1.Nickname1)
+	if len(p1.Changes) != 0 {
+		t.Errorf("should be 0 changes, but instead there are %d", len(p1.Changes))
+	}
+
+	p1.Nickname1 = "nickname"
+	err = c.db.SavePlayer(ctx, p1)
+	assertFatalf(t, err == nil, "error saving player: %v", err)
+
+	// Verify the nickname has been saved
+	p2, err := c.db.GetPlayer(ctx, p.ID)
+	assertFatalf(t, err == nil, "error fetching player: %v", err)
+	assertEquals(t, "Nickname1", "nickname", p2.Nickname1)
+	if len(p2.Changes) != 1 {
+		t.Errorf("should be 1 changes, but instead there are %d", len(p2.Changes))
+	}
+	assertPlayerChange(t, "change[0]", "Nickname1", "", "nickname", &p2.Changes[0])
+
+	// Update the nickname to a new value
+	p2.Nickname1 = "updated nickname"
+	err = c.db.SavePlayer(ctx, p2)
+	assertFatalf(t, err == nil, "error saving player: %v", err)
+
+	// Verify the nickname has been updated and saved correctly
+	p3, err := c.db.GetPlayer(ctx, p.ID)
+	assertFatalf(t, err == nil, "error fetching player: %v", err)
+	assertEquals(t, "Nickname1", "updated nickname", p3.Nickname1)
+	if len(p3.Changes) != 2 {
+		t.Errorf("should be 2 changes, but instead there are %d", len(p3.Changes))
+	}
+	assertPlayerChange(t, "change[0]", "Nickname1", "nickname", "updated nickname", &p3.Changes[0])
+	assertPlayerChange(t, "change[1]", "Nickname1", "", "nickname", &p3.Changes[1])
+
+	// Save the player with no nickname to make sure it isn't accidently deleted
+	// This simulates getting an update from sleeper that doesn't contain the nickname.
+	pNoNick := getPlayer()
+	pNoNick.Nickname1 = ""
+	err = c.db.SavePlayer(ctx, pNoNick)
+	assertFatalf(t, err == nil, "error saving player: %v", err)
+	pAfterUpdate, err := c.db.GetPlayer(ctx, p.ID)
+	assertFatalf(t, err == nil, "error fetching player: %v", err)
+	if !reflect.DeepEqual(p3, pAfterUpdate) {
+		t.Fatalf("players are not equal after saving an empty nickname")
+	}
+
+	// Now delete the nickname
+	err = c.db.DeleteNickname(ctx, p.ID, p3.Nickname1)
+	assertFatalf(t, err == nil, "error deleting player nickname")
+
+	// Verify the nickname has been deleted
+	p4, err := c.db.GetPlayer(ctx, p.ID)
+	assertFatalf(t, err == nil, "error fetching player: %v", err)
+	assertEquals(t, "Nickname1", "", p4.Nickname1)
+	if len(p4.Changes) != 3 {
+		t.Errorf("should be 3 changes, but instead there are %d", len(p4.Changes))
+	}
+	assertPlayerChange(t, "change[0]", "Nickname1", "updated nickname", "", &p4.Changes[0])
+	assertPlayerChange(t, "change[1]", "Nickname1", "nickname", "updated nickname", &p4.Changes[1])
+	assertPlayerChange(t, "change[2]", "Nickname1", "", "nickname", &p4.Changes[2])
+}
+
 func getPlayer() *model.Player {
 	return &model.Player{
 		ID:              "2374",
@@ -195,6 +271,18 @@ func assertFatalf(t *testing.T, c bool, f string, args ...any) {
 
 func assertEquals(t *testing.T, field string, expected, actual any) {
 	if expected != actual {
-		t.Errorf("%s - expected: %s, got: %s", field, expected, actual)
+		t.Errorf("%s - expected: '%s', got: '%s'", field, expected, actual)
+	}
+}
+
+func assertPlayerChange(t *testing.T, key, exProp, exOld, exNew string, c *model.Change) {
+	if exProp != c.PropertyName {
+		t.Errorf("%s.PropertyName - expected: '%s', got: '%s'", key, exProp, c.PropertyName)
+	}
+	if exOld != c.OldValue {
+		t.Errorf("%s.OldValue - expected: '%s', got: '%s'", key, exOld, c.OldValue)
+	}
+	if exNew != c.NewValue {
+		t.Errorf("%s.NewValue - expected: '%s', got: '%s'", key, exNew, c.NewValue)
 	}
 }

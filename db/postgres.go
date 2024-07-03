@@ -74,6 +74,35 @@ func (db *postgresDB) SavePlayer(ctx context.Context, p *model.Player) error {
 	return nil
 }
 
+func (db *postgresDB) DeleteNickname(ctx context.Context, id, oldNickname string) error {
+	const query = `UPDATE players SET nickname1=NULL WHERE id=@id`
+	args := pgx.NamedArgs{
+		"id": id,
+	}
+
+	change := &model.Change{
+		Time:         db.clock.Now().UTC(),
+		PropertyName: "Nickname1",
+		OldValue:     oldNickname,
+		NewValue:     "",
+	}
+
+	tx, err := db.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, query, args); err != nil {
+		return fmt.Errorf("error deleteing player nickname (%s): %w", id, err)
+	}
+	if err := insertPlayerChange(ctx, tx, id, change); err != nil {
+		return fmt.Errorf("error inserting player change (%s): %w", id, err)
+	}
+
+	return tx.Commit(ctx)
+}
+
 func (db *postgresDB) Search(ctx context.Context, q string, pos model.Position, team *model.NFLTeam) ([]model.Player, error) {
 	const query = `SELECT id, yahoo_id, name_first, name_last, nickname1,
 				  		position, team, weight_lb, height_in, birth_date,
@@ -288,18 +317,6 @@ func (db *postgresDB) updatePlayer(ctx context.Context, p *model.Player, changes
 			updated=@updated
 		WHERE id=@id`
 
-	const insertChange = `INSERT INTO player_changes(
-		player,
-		prop,
-		old,
-		new
-	) VALUES (
-		@playerId,
-		@prop,
-		@old,
-		@new
-	)`
-
 	tx, err := db.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -313,8 +330,7 @@ func (db *postgresDB) updatePlayer(ctx context.Context, p *model.Player, changes
 	}
 
 	for _, change := range changes {
-		args := namedArgsForPlayerChange(p.ID, &change)
-		_, err = tx.Exec(ctx, insertChange, args)
+		err := insertPlayerChange(ctx, tx, p.ID, &change)
 		if err != nil {
 			return fmt.Errorf("error inserting player change: %w", err)
 		}
@@ -333,28 +349,52 @@ func (db *postgresDB) updatePlayer(ctx context.Context, p *model.Player, changes
 	return nil
 }
 
-func (db *postgresDB) calculateChanges(p1, p2 *model.Player) ([]model.Change, error) {
+func insertPlayerChange(ctx context.Context, tx pgx.Tx, id string, change *model.Change) error {
+	const insertChange = `INSERT INTO player_changes(
+		player,
+		prop,
+		old,
+		new
+	) VALUES (
+		@playerId,
+		@prop,
+		@old,
+		@new
+	)`
+
+	args := pgx.NamedArgs{
+		"playerId": id,
+		"prop":     change.PropertyName,
+		"old":      change.OldValue,
+		"new":      change.NewValue,
+	}
+	_, err := tx.Exec(ctx, insertChange, args)
+	return err
+}
+
+func (db *postgresDB) calculateChanges(old, new *model.Player) ([]model.Change, error) {
 	changes := make([]model.Change, 0, 1)
 
-	changes = checkChange(changes, db.clock, "YahooId", p1.YahooID, p2.YahooID)
-	changes = checkChange(changes, db.clock, "FirstName", p1.FirstName, p2.FirstName)
-	changes = checkChange(changes, db.clock, "LastName", p1.LastName, p2.LastName)
-	changes = checkChange(changes, db.clock, "Position", string(p1.Position), string(p2.Position))
-	changes = checkChange(changes, db.clock, "Team", p1.Team.String(), p2.Team.String())
-	changes = checkChangeInt(changes, db.clock, "Weight", p1.Weight, p2.Weight)
-	changes = checkChangeInt(changes, db.clock, "Height", p1.Height, p2.Height)
-	changes = checkChange(changes, db.clock, "BirthDate", p1.FormattedBirthDate(), p2.FormattedBirthDate())
-	changes = checkChange(changes, db.clock, "RookieYear", p1.FormattedRookieYear(), p2.FormattedRookieYear())
-	changes = checkChangeInt(changes, db.clock, "YearsExp", p1.YearsExp, p2.YearsExp)
-	changes = checkChangeInt(changes, db.clock, "Jersey", p1.Jersey, p2.Jersey)
-	changes = checkChangeInt(changes, db.clock, "DepthChartOrder", p1.DepthChartOrder, p2.DepthChartOrder)
-	changes = checkChange(changes, db.clock, "College", p1.College, p2.College)
-	changes = checkChange(changes, db.clock, "Active", fmt.Sprintf("%v", p1.Active), fmt.Sprintf("%v", p2.Active))
+	changes = checkChange(changes, db.clock, "YahooId", old.YahooID, new.YahooID)
+	changes = checkChange(changes, db.clock, "FirstName", old.FirstName, new.FirstName)
+	changes = checkChange(changes, db.clock, "LastName", old.LastName, new.LastName)
+	changes = checkChange(changes, db.clock, "Position", string(old.Position), string(new.Position))
+	changes = checkChange(changes, db.clock, "Team", old.Team.String(), new.Team.String())
+	changes = checkChangeInt(changes, db.clock, "Weight", old.Weight, new.Weight)
+	changes = checkChangeInt(changes, db.clock, "Height", old.Height, new.Height)
+	changes = checkChange(changes, db.clock, "BirthDate", old.FormattedBirthDate(), new.FormattedBirthDate())
+	changes = checkChange(changes, db.clock, "RookieYear", old.FormattedRookieYear(), new.FormattedRookieYear())
+	changes = checkChangeInt(changes, db.clock, "YearsExp", old.YearsExp, new.YearsExp)
+	changes = checkChangeInt(changes, db.clock, "Jersey", old.Jersey, new.Jersey)
+	changes = checkChangeInt(changes, db.clock, "DepthChartOrder", old.DepthChartOrder, new.DepthChartOrder)
+	changes = checkChange(changes, db.clock, "College", old.College, new.College)
+	changes = checkChange(changes, db.clock, "Active", fmt.Sprintf("%v", old.Active), fmt.Sprintf("%v", new.Active))
 
 	// Nickname is special because it isn't part of the sleeper data, therefore
-	// don't delete if it exists in p1 but not in p2.
-	if p1.Nickname1 != "" && p2.Nickname1 == "" {
-		changes = checkChange(changes, db.clock, "Nickname1", p1.Nickname1, p2.Nickname1)
+	// only check for a change if the new data sets a nickname.
+	// To delete a nickname use db.DeleteNickname().
+	if new.Nickname1 != "" {
+		changes = checkChange(changes, db.clock, "Nickname1", old.Nickname1, new.Nickname1)
 	}
 	return changes, nil
 }
@@ -414,15 +454,6 @@ func namedArgsForPlayer(p *model.Player, clock clock.Clock) pgx.NamedArgs {
 			InfinityModifier: pgtype.Finite,
 			Valid:            true,
 		},
-	}
-}
-
-func namedArgsForPlayerChange(playerId string, c *model.Change) pgx.NamedArgs {
-	return pgx.NamedArgs{
-		"playerId": playerId,
-		"prop":     c.PropertyName,
-		"old":      c.OldValue,
-		"new":      c.NewValue,
 	}
 }
 
