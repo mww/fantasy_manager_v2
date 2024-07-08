@@ -19,7 +19,7 @@ func TestLoadPlayers_success(t *testing.T) {
 	}))
 	defer fakeSleeper.Close()
 
-	c := &Client{
+	c := &client{
 		url:        fakeSleeper.URL,
 		httpClient: http.DefaultClient,
 	}
@@ -96,7 +96,7 @@ func TestLoadPlayers_httpError(t *testing.T) {
 	}))
 	defer fakeSleeper.Close()
 
-	c := &Client{
+	c := &client{
 		url:        fakeSleeper.URL,
 		httpClient: http.DefaultClient,
 	}

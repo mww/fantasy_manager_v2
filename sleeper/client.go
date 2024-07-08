@@ -11,13 +11,17 @@ import (
 
 const SleeperURL = "https://api.sleeper.app"
 
-type Client struct {
+type Client interface {
+	LoadPlayers() ([]model.Player, error)
+}
+
+type client struct {
 	url        string
 	httpClient *http.Client
 }
 
-func New() (*Client, error) {
-	c := &Client{
+func New() (Client, error) {
+	c := &client{
 		url: SleeperURL,
 		httpClient: &http.Client{
 			Timeout: time.Second * 10,
@@ -26,7 +30,7 @@ func New() (*Client, error) {
 	return c, nil
 }
 
-func (c *Client) LoadPlayers() ([]model.Player, error) {
+func (c *client) LoadPlayers() ([]model.Player, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/players/nfl", c.url), nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating http request: %w", err)
