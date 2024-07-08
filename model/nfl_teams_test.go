@@ -102,3 +102,23 @@ func TestFriendly(t *testing.T) {
 		}
 	}
 }
+
+func TestEquals(t *testing.T) {
+	tests := []struct {
+		a    *NFLTeam
+		b    *NFLTeam
+		want bool
+	}{
+		{a: TEAM_BAL, b: TEAM_BAL, want: true},
+		{a: TEAM_SEA, b: TEAM_SFO, want: false},
+		{a: TEAM_DAL, b: nil, want: false},
+		{a: TEAM_SFO, b: TEAM_SFO, want: true},
+	}
+
+	for _, tc := range tests {
+		got := tc.a.Equals(tc.b)
+		if tc.want != got {
+			t.Errorf("expected: '%v', got: '%v'", tc.want, got)
+		}
+	}
+}

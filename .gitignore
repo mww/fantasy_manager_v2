@@ -6,3 +6,6 @@ fantasy_manager_v2
 
 # Don't need these Mac specific files
 .DS_Store
+
+# Coverage profile
+cover.out

@@ -7,11 +7,11 @@ import (
 
 // C encapsulates business logic without worrying about any web layers
 type C struct {
-	sleeper *sleeper.Client
+	sleeper sleeper.Client
 	db      db.DB
 }
 
-func New(sleeper *sleeper.Client, db db.DB) (*C, error) {
+func New(sleeper sleeper.Client, db db.DB) (*C, error) {
 	c := &C{
 		sleeper: sleeper,
 		db:      db,

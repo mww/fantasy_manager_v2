@@ -11,6 +11,7 @@ import (
 	"github.com/mww/fantasy_manager_v2/db/mockdb"
 	"github.com/mww/fantasy_manager_v2/model"
 	"github.com/mww/fantasy_manager_v2/sleeper"
+	"github.com/mww/fantasy_manager_v2/sleeper/mocksleeper"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -196,6 +197,86 @@ func TestUpdatePlayerNickname(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUpdatePlayers_success(t *testing.T) {
+	sleeper := &mocksleeper.Client{}
+	db := &mockdb.DB{}
+
+	ctrl, err := New(sleeper, db)
+	if err != nil {
+		t.Fatalf("error creating controller: %v", err)
+	}
+
+	players := []model.Player{
+		{ID: "1", FirstName: "One", LastName: "LastOne", Position: model.POS_QB},
+		{ID: "2", FirstName: "Two", LastName: "LastTwo", Position: model.POS_WR},
+		{ID: "3", FirstName: "Three", LastName: "LastThree", Position: model.POS_RB},
+		{ID: "4", FirstName: "Four", LastName: "LastFour", Position: model.POS_TE},
+	}
+
+	sleeper.On("LoadPlayers").Return(players, nil)
+	db.On("SavePlayer", mock.Anything, &players[0]).Return(nil)
+	db.On("SavePlayer", mock.Anything, &players[1]).Return(nil)
+	db.On("SavePlayer", mock.Anything, &players[2]).Return(nil)
+	db.On("SavePlayer", mock.Anything, &players[3]).Return(nil)
+
+	err = ctrl.UpdatePlayers(context.Background())
+	if err != nil {
+		t.Errorf("error updating players: %v", err)
+	}
+
+	sleeper.AssertExpectations(t)
+	db.AssertExpectations(t)
+}
+
+func TestUpdatePlayers_sleeperError(t *testing.T) {
+	sleeper := &mocksleeper.Client{}
+	db := &mockdb.DB{}
+
+	ctrl, err := New(sleeper, db)
+	if err != nil {
+		t.Fatalf("error creating controller: %v", err)
+	}
+
+	sleeper.On("LoadPlayers").Return(nil, errors.New("error from sleeper"))
+
+	err = ctrl.UpdatePlayers(context.Background())
+	if !errorsEqual(err, errors.New("error from sleeper")) {
+		t.Errorf("not the expected error: '%v'", err)
+	}
+
+	sleeper.AssertExpectations(t)
+	db.AssertNotCalled(t, "SavePlayer", mock.Anything, mock.Anything)
+}
+
+func TestUpdatePlayers_dbError(t *testing.T) {
+	sleeper := &mocksleeper.Client{}
+	db := &mockdb.DB{}
+
+	ctrl, err := New(sleeper, db)
+	if err != nil {
+		t.Fatalf("error creating controller: %v", err)
+	}
+
+	players := []model.Player{
+		{ID: "1", FirstName: "One", LastName: "LastOne", Position: model.POS_QB},
+		{ID: "2", FirstName: "Two", LastName: "LastTwo", Position: model.POS_WR},
+		{ID: "3", FirstName: "Three", LastName: "LastThree", Position: model.POS_RB},
+		{ID: "4", FirstName: "Four", LastName: "LastFour", Position: model.POS_TE},
+	}
+
+	sleeper.On("LoadPlayers").Return(players, nil)
+	db.On("SavePlayer", mock.Anything, &players[0]).Return(nil)
+	db.On("SavePlayer", mock.Anything, &players[1]).Return(errors.New("this error"))
+
+	err = ctrl.UpdatePlayers(context.Background())
+	if !errorsEqual(err, errors.New("error saving player (Two LastTwo): this error")) {
+		t.Errorf("not the expected error: '%v'", err)
+	}
+
+	sleeper.AssertExpectations(t)
+	db.AssertExpectations(t)
 }
 
 func errorsEqual(e1, e2 error) bool {
