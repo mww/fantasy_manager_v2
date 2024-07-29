@@ -73,7 +73,7 @@ func main() {
 
 	// Setup a job that updates the players database from sleeper every 24-hours
 	wg.Add(1)
-	go ctrl.RunPeriodicPlayerUpdates(shutdown, wg)
+	go ctrl.RunPeriodicPlayerUpdates(24*time.Hour, shutdown, wg)
 
 	// Start the web server
 	wg.Add(1)

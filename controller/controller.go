@@ -28,7 +28,7 @@ type C interface {
 	// was one.
 	AddRankings(r io.Reader, date time.Time) (string, error)
 
-	RunPeriodicPlayerUpdates(shutdown chan bool, wg *sync.WaitGroup)
+	RunPeriodicPlayerUpdates(frequency time.Duration, shutdown chan bool, wg *sync.WaitGroup)
 }
 
 type controller struct {

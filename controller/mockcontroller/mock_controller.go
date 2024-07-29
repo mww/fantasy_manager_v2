@@ -51,6 +51,6 @@ func (c *C) AddRankings(r io.Reader, date time.Time) (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-func (c *C) RunPeriodicPlayerUpdates(shutdown chan bool, wg *sync.WaitGroup) {
-	c.Called(shutdown, wg)
+func (c *C) RunPeriodicPlayerUpdates(frequency time.Duration, shutdown chan bool, wg *sync.WaitGroup) {
+	c.Called(frequency, shutdown, wg)
 }

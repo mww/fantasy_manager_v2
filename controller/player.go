@@ -78,8 +78,8 @@ func (c *controller) AddRankings(r io.Reader, date time.Time) (string, error) {
 	return "0", nil
 }
 
-func (c *controller) RunPeriodicPlayerUpdates(shutdown chan bool, wg *sync.WaitGroup) {
-	ticker := time.NewTicker(24 * time.Hour) // Make sure we update players once per day
+func (c *controller) RunPeriodicPlayerUpdates(frequency time.Duration, shutdown chan bool, wg *sync.WaitGroup) {
+	ticker := time.NewTicker(frequency)
 	defer wg.Done()
 
 	for {

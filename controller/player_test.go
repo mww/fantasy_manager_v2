@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/mww/fantasy_manager_v2/db"
 	"github.com/mww/fantasy_manager_v2/db/mockdb"
@@ -199,6 +201,39 @@ func TestUpdatePlayerNickname(t *testing.T) {
 	}
 }
 
+func TestAddRankings(t *testing.T) {
+	tests := map[string]struct {
+		date          string
+		expectedID    string
+		expectedError error
+	}{
+		"simple add": {date: "2024-06-26", expectedID: "0", expectedError: nil},
+	}
+
+	// TODO: flesh out tests more
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			mockSleeper := mocksleeper.Client{}
+			mockDB := mockdb.DB{}
+
+			ctrl, err := New(&mockSleeper, &mockDB)
+			if err != nil {
+				t.Fatalf("error constructing controller: %v", err)
+			}
+
+			date, _ := time.Parse(time.DateOnly, tc.date)
+
+			id, err := ctrl.AddRankings(nil, date)
+			if !errorsEqual(err, tc.expectedError) {
+				t.Errorf("error not the same as expected. wanted: %v, got: %v", tc.expectedError, err)
+			}
+			if id != tc.expectedID {
+				t.Errorf("id not the same as expected. wanted: %s, got: %s", tc.expectedID, id)
+			}
+		})
+	}
+}
+
 func TestUpdatePlayers_success(t *testing.T) {
 	sleeper := &mocksleeper.Client{}
 	db := &mockdb.DB{}
@@ -274,6 +309,43 @@ func TestUpdatePlayers_dbError(t *testing.T) {
 	if !errorsEqual(err, errors.New("error saving player (Two LastTwo): this error")) {
 		t.Errorf("not the expected error: '%v'", err)
 	}
+
+	sleeper.AssertExpectations(t)
+	db.AssertExpectations(t)
+}
+
+func TestRunPeriodicPlayerUpdates(t *testing.T) {
+	sleeper := &mocksleeper.Client{}
+	db := &mockdb.DB{}
+
+	ctrl, err := New(sleeper, db)
+	if err != nil {
+		t.Fatalf("error creating controller: %v", err)
+	}
+
+	players := []model.Player{
+		{ID: "1", FirstName: "One", LastName: "LastOne", Position: model.POS_QB},
+		{ID: "2", FirstName: "Two", LastName: "LastTwo", Position: model.POS_WR},
+		{ID: "3", FirstName: "Three", LastName: "LastThree", Position: model.POS_RB},
+		{ID: "4", FirstName: "Four", LastName: "LastFour", Position: model.POS_TE},
+	}
+
+	sleeper.On("LoadPlayers").Return(players, nil).Times(3)
+	db.On("SavePlayer", mock.Anything, &players[0]).Return(nil).Times(3)
+	db.On("SavePlayer", mock.Anything, &players[1]).Return(nil).Times(3)
+	db.On("SavePlayer", mock.Anything, &players[2]).Return(nil).Times(3)
+	db.On("SavePlayer", mock.Anything, &players[3]).Return(nil).Times(3)
+
+	shutdown := make(chan bool, 1)
+	go func() {
+		time.Sleep(160 * time.Millisecond) // enough time to run 3 times, but not 4
+		close(shutdown)
+	}()
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	ctrl.RunPeriodicPlayerUpdates(50*time.Millisecond, shutdown, &wg)
+	wg.Wait()
 
 	sleeper.AssertExpectations(t)
 	db.AssertExpectations(t)
