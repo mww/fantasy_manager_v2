@@ -9,7 +9,7 @@ import (
 	"github.com/unrolled/render"
 )
 
-func getRouter(ctrl *controller.C, render *render.Render) *chi.Mux {
+func getRouter(ctrl controller.C, render *render.Render) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -30,6 +30,12 @@ func getRouter(ctrl *controller.C, render *render.Render) *chi.Mux {
 		r.Get("/", playerSearchHandler(ctrl, render))
 		r.Get("/{playerID:\\d+}", getPlayerHandler(ctrl, render))
 		r.Post("/{playerID:\\d+}", updatePlayerHandler(ctrl, render))
+
+		r.Route("/rankings", func(r chi.Router) {
+			r.Get("/", rankingsRootHandler(ctrl, render))
+			r.Post("/", rankingsUploadHandler(ctrl, render))
+			r.Get("/{rankingID}", rankingsHandler(ctrl, render))
+		})
 	})
 
 	r.Route("/admin", func(r chi.Router) {

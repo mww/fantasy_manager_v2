@@ -21,23 +21,8 @@ type Server struct {
 	server *http.Server
 }
 
-func NewServer(port int, ctrl *controller.C) (*Server, error) {
-	render := render.New(render.Options{
-		Directory: "templates",
-		Layout:    "layout",
-		FileSystem: &render.EmbedFileSystem{
-			FS: templates,
-		},
-		Funcs: []template.FuncMap{
-			{
-				"age":    ageFormatter,
-				"date":   dateFormatter,
-				"height": heightFormatter,
-				"year":   yearFormatter,
-			},
-		},
-	})
-
+func NewServer(port int, ctrl controller.C) (*Server, error) {
+	render := newRender()
 	router := getRouter(ctrl, render)
 
 	s := &Server{
@@ -69,6 +54,24 @@ func (s *Server) ListenAndServe(shutdown chan bool, wg *sync.WaitGroup) {
 	if err != nil && err != http.ErrServerClosed {
 		log.Fatalf("fatal error with server: %v", err)
 	}
+}
+
+func newRender() *render.Render {
+	return render.New(render.Options{
+		Directory: "templates",
+		Layout:    "layout",
+		FileSystem: &render.EmbedFileSystem{
+			FS: templates,
+		},
+		Funcs: []template.FuncMap{
+			{
+				"age":    ageFormatter,
+				"date":   dateFormatter,
+				"height": heightFormatter,
+				"year":   yearFormatter,
+			},
+		},
+	})
 }
 
 func ageFormatter(t time.Time) string {
