@@ -32,6 +32,7 @@ exclude:
   paths:
     - main.go$
     - ^web     # exclude package `web`
+    - ^controller/mockcontroller/mock_controller.go$
  
 # NOTES:
 # - symbol `/` in all path regexps will be replaced by current OS file path separator

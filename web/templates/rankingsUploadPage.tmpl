@@ -1,0 +1,21 @@
+<h1>Upload new rankings data</h1>
+
+<div>
+Download rankings from <a href="https://www.fantasypros.com/nfl/rankings/ros-half-point-ppr-overall.php">fantasypros</a>
+
+<div id="rankings">
+    <form enctype="multipart/form-data" action="/players/rankings" method="post">
+        <div>
+            <label for="rankings-date">Date of rankings</label>
+            <input type="date" id="rankings-date" name="rankings-date" min="2021-08-01" max="2030-12-31">
+        </div>
+
+        <div>
+            <input type="file" name="rankings-file" />
+        </div>
+
+        <div>
+            <input type="submit" value="Upload" />
+        </div>
+    </form>
+</div>

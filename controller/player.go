@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"regexp"
 	"strings"
@@ -13,11 +14,11 @@ import (
 	"github.com/mww/fantasy_manager_v2/model"
 )
 
-func (c *C) GetPlayer(ctx context.Context, id string) (*model.Player, error) {
+func (c *controller) GetPlayer(ctx context.Context, id string) (*model.Player, error) {
 	return c.db.GetPlayer(ctx, id)
 }
 
-func (c *C) Search(ctx context.Context, query string) ([]model.Player, error) {
+func (c *controller) Search(ctx context.Context, query string) ([]model.Player, error) {
 	q, pos := getPositionFromQuery(query)
 	q, team := getTeamFromQuery(q)
 
@@ -29,7 +30,7 @@ func (c *C) Search(ctx context.Context, query string) ([]model.Player, error) {
 
 // Updates a player's nickname, or deletes it if the nickname == ""
 // Returns an error if not successful, nil otherwise.
-func (c *C) UpdatePlayerNickname(ctx context.Context, id, nickname string) error {
+func (c *controller) UpdatePlayerNickname(ctx context.Context, id, nickname string) error {
 	p, err := c.db.GetPlayer(ctx, id)
 	if err != nil {
 		return err
@@ -48,7 +49,7 @@ func (c *C) UpdatePlayerNickname(ctx context.Context, id, nickname string) error
 	return c.db.SavePlayer(ctx, p)
 }
 
-func (c *C) UpdatePlayers(ctx context.Context) error {
+func (c *controller) UpdatePlayers(ctx context.Context) error {
 	start := time.Now()
 	log.Printf("update players starting at %v", start.Format(time.DateTime))
 
@@ -68,8 +69,17 @@ func (c *C) UpdatePlayers(ctx context.Context) error {
 	return nil
 }
 
-func (c *C) RunPeriodicPlayerUpdates(shutdown chan bool, wg *sync.WaitGroup) {
-	ticker := time.NewTicker(24 * time.Hour) // Make sure we update players once per day
+// Add a new rankings for players. This will parse the data from the reader (in CSV format) and
+// create a new rankings data point. Returns the id of the new rankings and an error if there
+// was one.
+func (c *controller) AddRankings(r io.Reader, date time.Time) (string, error) {
+	// TODO
+	log.Printf("in AddRankings()")
+	return "0", nil
+}
+
+func (c *controller) RunPeriodicPlayerUpdates(frequency time.Duration, shutdown chan bool, wg *sync.WaitGroup) {
+	ticker := time.NewTicker(frequency)
 	defer wg.Done()
 
 	for {
