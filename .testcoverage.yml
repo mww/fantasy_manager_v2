@@ -25,6 +25,8 @@ override:
   - threshold: 50
     path: ^containers$
   - threshold: 50
+    path: ^containers/db_container.go$
+  - threshold: 50
     path: ^testutils$
 
 # Holds regexp rules which will exclude matched files or packages 

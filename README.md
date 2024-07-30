@@ -21,3 +21,17 @@ docker exec -it fantasy-manager-db psql -U ffuser fantasy_manager
 Be sure to look at `.env.sample`. You need to set POSTGRES_CONN_STR either
 as an environment variable or in your `.env` file before you can run the
 server.
+
+# Code Coverage
+
+To generate code coverage run
+
+```
+go test -count=1 -race -shuffle=on -coverprofile=./cover.out -covermode=atomic -coverpkg=./... ./...
+```
+
+Then to view the coverage report
+
+```
+go tool cover -html="cover.out"
+```

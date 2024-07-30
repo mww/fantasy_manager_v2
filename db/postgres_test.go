@@ -26,7 +26,6 @@ var (
 // TestMain controls the main for the tests and allows for setup and shutdown of the tests
 func TestMain(m *testing.M) {
 	container := containers.NewDBContainer()
-	defer container.Shutdown()
 
 	clock := clock.New()
 
@@ -48,6 +47,7 @@ func TestMain(m *testing.M) {
 	}
 
 	code := m.Run()
+	container.Shutdown()
 	os.Exit(code)
 }
 
