@@ -19,13 +19,11 @@ func (c *controller) GetPlayer(ctx context.Context, id string) (*model.Player, e
 }
 
 func (c *controller) Search(ctx context.Context, query string) ([]model.Player, error) {
-	q, pos := getPositionFromQuery(query)
-	q, team := getTeamFromQuery(q)
-
-	if pos == model.POS_UNKNOWN && team == nil && q == "" {
-		return nil, fmt.Errorf("error not a valid query: '%s'", query)
+	term, pos, team, err := getPlayerSearchQuery(query)
+	if err != nil {
+		return nil, err
 	}
-	return c.db.Search(ctx, q, pos, team)
+	return c.db.Search(ctx, term, pos, team)
 }
 
 // Updates a player's nickname, or deletes it if the nickname == ""
@@ -138,4 +136,14 @@ func getTeamFromQuery(q string) (string, *model.NFLTeam) {
 	}
 
 	return q, team
+}
+
+func getPlayerSearchQuery(query string) (string, model.Position, *model.NFLTeam, error) {
+	q, pos := getPositionFromQuery(query)
+	q, team := getTeamFromQuery(q)
+
+	if pos == model.POS_UNKNOWN && team == nil && q == "" {
+		return "", model.POS_UNKNOWN, nil, fmt.Errorf("error not a valid query: '%s'", query)
+	}
+	return q, pos, team, nil
 }
