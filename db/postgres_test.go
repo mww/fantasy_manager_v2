@@ -3,86 +3,62 @@ package db
 import (
 	"context"
 	"errors"
-	"log"
-	"path/filepath"
+	"fmt"
+	"os"
 	"reflect"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/itbasis/go-clock"
+	"github.com/mww/fantasy_manager_v2/containers"
 	"github.com/mww/fantasy_manager_v2/model"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-const (
-	image      = "postgres:16.3-alpine"
-	dbName     = "fantasy_manager"
-	dbUser     = "ffuser"
-	dbPassword = "secret"
+var (
+	// A test global db instance to use for all of the tests instead of setting up a new one each time.
+	testDB DB
+
+	// a counter to generate new player ids for each test. To help keep them separated.
+	idCtr = int32(0)
 )
 
-type dbContainer struct {
-	container *postgres.PostgresContainer
-	db        DB
-}
-
-func NewContainer() *dbContainer {
-	ctx := context.Background()
-
-	container, err := postgres.RunContainer(ctx,
-		testcontainers.WithImage(image),
-		postgres.WithDatabase(dbName),
-		postgres.WithUsername(dbUser),
-		postgres.WithPassword(dbPassword),
-		postgres.WithInitScripts(filepath.Join("..", "schema", "schema.sql")),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(5*time.Second)),
-	)
-	if err != nil {
-		log.Fatalf("error starting container: %v", err)
-	}
-
-	// explicitly set sslmode=disable because the container is not configured to use TLS
-	connStr, err := container.ConnectionString(context.Background(), "sslmode=disable")
-	if err != nil {
-		log.Fatalf("error getting connection string: %v", err)
-	}
+// TestMain controls the main for the tests and allows for setup and shutdown of the tests
+func TestMain(m *testing.M) {
+	container := containers.NewDBContainer()
+	defer container.Shutdown()
 
 	clock := clock.New()
-	db, err := New(ctx, connStr, clock)
+
+	defer func() {
+		// Catch all panics to make sure the shutdown is successfully run
+		if r := recover(); r != nil {
+			if container != nil {
+				container.Shutdown()
+			}
+			fmt.Println("panic")
+		}
+	}()
+
+	var err error
+	testDB, err = New(context.Background(), container.ConnectionString(), clock)
 	if err != nil {
-		log.Fatalf("error creating db instance: %s", err)
+		fmt.Printf("error connecting to db: %v", err)
+		os.Exit(-1)
 	}
 
-	return &dbContainer{
-		container: container,
-		db:        db,
-	}
-}
-
-func (c *dbContainer) Shutdown() {
-	err := c.container.Terminate(context.Background())
-	if err != nil {
-		log.Fatalf("error terminating container: %v", err)
-	}
+	code := m.Run()
+	os.Exit(code)
 }
 
 func TestDB_saveAndLoad(t *testing.T) {
 	ctx := context.Background()
-
-	c := NewContainer()
-	defer c.Shutdown()
-
 	p := getPlayer()
 
-	err := c.db.SavePlayer(ctx, p)
+	err := testDB.SavePlayer(ctx, p)
 	assertFatalf(t, err == nil, "error saving player: %v", err)
 
-	res, err := c.db.GetPlayer(ctx, "2374")
+	res, err := testDB.GetPlayer(ctx, p.ID)
 	assertFatalf(t, err == nil, "error retreiving player: %v", err)
 
 	// Make sure that the after saving and retreiving the player, all the fields
@@ -123,11 +99,11 @@ func TestDB_saveAndLoad(t *testing.T) {
 
 	// Now update a field and make sure it persists as expected.
 	p.Weight = p.Weight - 5
-	err = c.db.SavePlayer(ctx, p)
+	err = testDB.SavePlayer(ctx, p)
 	assertFatalf(t, err == nil, "error saving player after update: %v", err)
 
-	res2, err := c.db.GetPlayer(ctx, "2374")
-	assertFatalf(t, err == nil, "error saving updated player: %v", err)
+	res2, err := testDB.GetPlayer(ctx, p.ID)
+	assertFatalf(t, err == nil, "error getting updated player: %v", err)
 
 	assertEquals(t, "Weight", p.Weight, res2.Weight)
 	assertEquals(t, "Changes", 1, len(p.Changes))
@@ -137,7 +113,7 @@ func TestDB_saveAndLoad(t *testing.T) {
 	}
 
 	// Lookup a player that doesn't exist
-	res3, err := c.db.GetPlayer(ctx, "1111")
+	res3, err := testDB.GetPlayer(ctx, "1111")
 	assertFatalf(t, err != nil, "should have had an error searching for player")
 	assertEquals(t, "error type", true, errors.Is(err, ErrPlayerNotFound))
 	if res3 != nil {
@@ -148,38 +124,37 @@ func TestDB_saveAndLoad(t *testing.T) {
 func TestDB_search(t *testing.T) {
 	ctx := context.Background()
 
-	c := NewContainer()
-	defer c.Shutdown()
-
+	// Change the player name since default player returned by getPlayer is used in several places
+	// and may be in the DB multiple times.
 	p := getPlayer()
+	p.ID = "9999" // Set a static ID since we only ever want one player with this name in the DB
+	p.FirstName = "DK"
+	p.LastName = "Metcalf"
+	p.Nickname1 = ""
 
-	err := c.db.SavePlayer(ctx, p)
+	err := testDB.SavePlayer(ctx, p)
 	assertFatalf(t, err == nil, "error saving player: %v", err)
 
-	players, err := c.db.Search(ctx, "Tyler", model.POS_UNKNOWN, nil)
+	players, err := testDB.Search(ctx, "Metcalf", model.POS_UNKNOWN, nil)
 	assertFatalf(t, err == nil, "error searching for player: %v", err)
 	assertEquals(t, "num players found", 1, len(players))
 
-	players, err = c.db.Search(ctx, "Frank", model.POS_UNKNOWN, nil)
+	players, err = testDB.Search(ctx, "Frank", model.POS_UNKNOWN, nil)
 	assertFatalf(t, err == nil, "error searching for players: %v", err)
-	assertEquals(t, "num players found 2", 0, len(players))
+	assertEquals(t, "num players found when searching for Frank", 0, len(players))
 
 	// TODO: add tests for searching by position and team
 }
 
 func TestNicknames(t *testing.T) {
 	ctx := context.Background()
-
-	c := NewContainer()
-	defer c.Shutdown()
-
 	p := getPlayer()
 	p.Nickname1 = "" // Make sure no nickname to start
 
-	err := c.db.SavePlayer(ctx, p)
+	err := testDB.SavePlayer(ctx, p)
 	assertFatalf(t, err == nil, "error saving player: %v", err)
 
-	p1, err := c.db.GetPlayer(ctx, p.ID)
+	p1, err := testDB.GetPlayer(ctx, p.ID)
 	assertFatalf(t, err == nil, "error fetching player: %v", err)
 	assertEquals(t, "Nickname1", "", p1.Nickname1)
 	if len(p1.Changes) != 0 {
@@ -187,11 +162,11 @@ func TestNicknames(t *testing.T) {
 	}
 
 	p1.Nickname1 = "nickname"
-	err = c.db.SavePlayer(ctx, p1)
+	err = testDB.SavePlayer(ctx, p1)
 	assertFatalf(t, err == nil, "error saving player: %v", err)
 
 	// Verify the nickname has been saved
-	p2, err := c.db.GetPlayer(ctx, p.ID)
+	p2, err := testDB.GetPlayer(ctx, p.ID)
 	assertFatalf(t, err == nil, "error fetching player: %v", err)
 	assertEquals(t, "Nickname1", "nickname", p2.Nickname1)
 	if len(p2.Changes) != 1 {
@@ -201,11 +176,11 @@ func TestNicknames(t *testing.T) {
 
 	// Update the nickname to a new value
 	p2.Nickname1 = "updated nickname"
-	err = c.db.SavePlayer(ctx, p2)
+	err = testDB.SavePlayer(ctx, p2)
 	assertFatalf(t, err == nil, "error saving player: %v", err)
 
 	// Verify the nickname has been updated and saved correctly
-	p3, err := c.db.GetPlayer(ctx, p.ID)
+	p3, err := testDB.GetPlayer(ctx, p.ID)
 	assertFatalf(t, err == nil, "error fetching player: %v", err)
 	assertEquals(t, "Nickname1", "updated nickname", p3.Nickname1)
 	if len(p3.Changes) != 2 {
@@ -218,20 +193,20 @@ func TestNicknames(t *testing.T) {
 	// This simulates getting an update from sleeper that doesn't contain the nickname.
 	pNoNick := getPlayer()
 	pNoNick.Nickname1 = ""
-	err = c.db.SavePlayer(ctx, pNoNick)
+	err = testDB.SavePlayer(ctx, pNoNick)
 	assertFatalf(t, err == nil, "error saving player: %v", err)
-	pAfterUpdate, err := c.db.GetPlayer(ctx, p.ID)
+	pAfterUpdate, err := testDB.GetPlayer(ctx, p.ID)
 	assertFatalf(t, err == nil, "error fetching player: %v", err)
 	if !reflect.DeepEqual(p3, pAfterUpdate) {
 		t.Fatalf("players are not equal after saving an empty nickname")
 	}
 
 	// Now delete the nickname
-	err = c.db.DeleteNickname(ctx, p.ID, p3.Nickname1)
+	err = testDB.DeleteNickname(ctx, p.ID, p3.Nickname1)
 	assertFatalf(t, err == nil, "error deleting player nickname")
 
 	// Verify the nickname has been deleted
-	p4, err := c.db.GetPlayer(ctx, p.ID)
+	p4, err := testDB.GetPlayer(ctx, p.ID)
 	assertFatalf(t, err == nil, "error fetching player: %v", err)
 	assertEquals(t, "Nickname1", "", p4.Nickname1)
 	if len(p4.Changes) != 3 {
@@ -243,8 +218,10 @@ func TestNicknames(t *testing.T) {
 }
 
 func getPlayer() *model.Player {
+	id := atomic.AddInt32(&idCtr, 1)
+
 	return &model.Player{
-		ID:              "2374",
+		ID:              fmt.Sprintf("%d", id),
 		YahooID:         "28457",
 		FirstName:       "Tyler",
 		LastName:        "Lockett",

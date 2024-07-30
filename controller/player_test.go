@@ -4,18 +4,39 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
+	"os"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/mww/fantasy_manager_v2/db"
-	"github.com/mww/fantasy_manager_v2/db/mockdb"
 	"github.com/mww/fantasy_manager_v2/model"
 	"github.com/mww/fantasy_manager_v2/sleeper"
 	"github.com/mww/fantasy_manager_v2/sleeper/mocksleeper"
-	"github.com/stretchr/testify/mock"
+	"github.com/mww/fantasy_manager_v2/testutils"
 )
+
+// A global testDB instance to use for all of the tests instead of setting up a new one each time.
+var testDB *testutils.TestDB
+
+// TestMain controls the main for the tests and allows for setup and shutdown of the tests
+func TestMain(m *testing.M) {
+	defer func() {
+		// Catch all panics to make sure the shutdown is successfully run
+		if r := recover(); r != nil {
+			if testDB != nil {
+				testDB.Shutdown()
+			}
+			fmt.Println("panic")
+		}
+	}()
+
+	// Setup the global testDB variable
+	testDB = testutils.NewTestDB()
+	defer testDB.Shutdown()
+	code := m.Run()
+	os.Exit(code)
+}
 
 func TestGetPositionFromQuery(t *testing.T) {
 	tests := map[string]struct {
@@ -81,121 +102,111 @@ func TestGetTeamFromQuery(t *testing.T) {
 	}
 }
 
-func TestSearch(t *testing.T) {
-	sleeper, err := sleeper.New()
-	if err != nil {
-		t.Fatalf("error getting sleeper client: %v", err)
-	}
-
-	mockResults := []model.Player{
-		{ID: "1", FirstName: "Player1", LastName: "Last1"},
-		{ID: "2", FirstName: "Player2", LastName: "Last2"},
-	}
-
+func TestGetPlayerSearchQuery(t *testing.T) {
 	tests := map[string]struct {
-		q   string
-		res []model.Player
-		err error
-		// The expected arguments to the db call
-		exQ string
-		exP model.Position
-		exT *model.NFLTeam
+		q     string
+		exQ   string
+		exP   model.Position
+		exT   *model.NFLTeam
+		exErr bool
 	}{
-		"positive plain":     {q: "Christian McCaffrey", res: mockResults, exQ: "Christian McCaffrey", exP: model.POS_UNKNOWN, exT: nil},
-		"positive both":      {q: "AJ Brown team:PHI pos:WR", res: mockResults, exQ: "AJ Brown", exP: model.POS_WR, exT: model.TEAM_PHI},
-		"positive just team": {q: "CeeDee Lamb team:cowboys", res: mockResults, exQ: "CeeDee Lamb", exP: model.POS_UNKNOWN, exT: model.TEAM_DAL},
-		"positive just pos":  {q: "Ken Walker pos:RB", res: mockResults, exQ: "Ken Walker", exP: model.POS_RB, exT: nil},
-		"empty":              {q: "", exQ: "", res: nil, err: fmt.Errorf("error not a valid query: ''"), exP: model.POS_UNKNOWN},
-		"db error":           {q: "Jalen Hurts", res: nil, err: errors.New("db error"), exQ: "Jalen Hurts", exP: model.POS_UNKNOWN, exT: nil},
+		"positive plain":     {q: "Christian McCaffrey", exQ: "Christian McCaffrey", exP: model.POS_UNKNOWN, exT: nil, exErr: false},
+		"positive both":      {q: "AJ Brown team:PHI pos:WR", exQ: "AJ Brown", exP: model.POS_WR, exT: model.TEAM_PHI, exErr: false},
+		"positive just team": {q: "CeeDee Lamb team:cowboys", exQ: "CeeDee Lamb", exP: model.POS_UNKNOWN, exT: model.TEAM_DAL, exErr: false},
+		"positive just pos":  {q: "Ken Walker pos:RB", exQ: "Ken Walker", exP: model.POS_RB, exT: nil, exErr: false},
+		"empty":              {q: "", exQ: "", exP: model.POS_UNKNOWN, exT: nil, exErr: true},
 	}
 
 	for name, tc := range tests {
-		mockDB := &mockdb.DB{}
-		ctrl, err := New(sleeper, mockDB)
-		if err != nil {
-			t.Fatalf("error constructing controller: %v", err)
-		}
-
 		t.Run(name, func(t *testing.T) {
-			if tc.exQ != "" || tc.exP != model.POS_UNKNOWN || tc.exT != nil {
-				mockDB.On("Search", mock.Anything, tc.exQ, tc.exP, tc.exT).Return(tc.res, tc.err)
+			term, pos, team, err := getPlayerSearchQuery(tc.q)
+			if tc.exErr && err == nil {
+				t.Errorf("expected error, got none")
+			}
+			if !tc.exErr && err != nil {
+				t.Errorf("did not expect error, but got: %v", err)
 			}
 
-			res, err := ctrl.Search(context.Background(), tc.q)
-			if !reflect.DeepEqual(res, tc.res) {
-				t.Errorf("result was not the expected value")
+			if term != tc.exQ {
+				t.Errorf("expected term: '%s', got: '%s'", tc.exQ, term)
 			}
-			if !errorsEqual(err, tc.err) {
-				t.Errorf("unexpected err value, wanted: '%v', got: '%v'", tc.err, err)
+			if pos != tc.exP {
+				t.Errorf("expected position: '%v', got: '%v'", tc.exP, pos)
 			}
-
-			mockDB.AssertExpectations(t)
+			if team != tc.exT {
+				t.Errorf("expected team: '%v', got '%v'", tc.exT, team)
+			}
 		})
 	}
 }
 
 func TestUpdatePlayerNickname(t *testing.T) {
+	ctx := context.Background()
 	sleeper, err := sleeper.New()
 	if err != nil {
 		t.Fatalf("error getting sleeper client: %v", err)
 	}
 
-	// These are modified by the tests, so don't reuse them between tests
-	p1 := &model.Player{ID: "1", FirstName: "Tyler", LastName: "Lockett"}
-	p2 := &model.Player{ID: "2", FirstName: "Tyler", LastName: "Lockett", Nickname1: "Hot Locket"}
-	p3 := &model.Player{ID: "3", FirstName: "Josh", LastName: "Jacobs", Nickname1: "Fat Thor"}
-	p4 := &model.Player{ID: "4", FirstName: "TJ", LastName: "Hockenson"}
-
-	saveErr := errors.New("some error saving a player")
-
-	tests := map[string]struct {
-		id      string
-		p       *model.Player
-		nn      string
-		err     error
-		saveEx  bool // if the save call is expected or not
-		saveErr error
+	// Using a slice to enforce test ordering.
+	// Some tests rely on other tests being run first.
+	tests := []struct {
+		name string
+		id   string
+		nn   string
+		err  error  // the expected error
+		exNN string // the expected nickname after running UpdatePlayerNickname()
 	}{
-		"simple add":      {id: p1.ID, p: p1, nn: "nickname", err: nil, saveEx: true, saveErr: nil},
-		"no player found": {id: "20", p: nil, nn: "nickname", err: db.ErrPlayerNotFound, saveEx: false},
-		"nn already set":  {id: p2.ID, p: p2, nn: p2.Nickname1, err: errors.New("no updated needed"), saveEx: false},
-		"delete nn":       {id: p3.ID, p: p3, nn: "", err: nil, saveEx: true, saveErr: nil},
-		"save error":      {id: p4.ID, p: p4, nn: "The HockStrap", err: saveErr, saveEx: true, saveErr: saveErr},
+		{
+			name: "simple add",
+			id:   testutils.TylerLockett.ID,
+			nn:   "Hot Locket",
+			err:  nil,
+			exNN: "Hot Locket",
+		},
+		{
+			name: "nn already set",
+			id:   testutils.TylerLockett.ID,
+			nn:   "Hot Locket",
+			err:  errors.New("no updated needed"),
+			exNN: "Hot Locket",
+		},
+		{
+			name: "no player found",
+			id:   "111",
+			nn:   "nickname",
+			err:  db.ErrPlayerNotFound,
+			exNN: "skip",
+		},
+		{
+			name: "delete nickname",
+			id:   testutils.TylerLockett.ID,
+			nn:   "",
+			err:  nil,
+			exNN: "",
+		},
 	}
 
-	for name, tc := range tests {
-		mockDB := &mockdb.DB{}
-		ctrl, err := New(sleeper, mockDB)
-		if err != nil {
-			t.Fatalf("error constructing controller: %v", err)
-		}
+	ctrl, err := New(sleeper, testDB.DB)
+	if err != nil {
+		t.Fatalf("error constructing controller: %v", err)
+	}
 
-		t.Run(name, func(t *testing.T) {
-			if tc.p != nil {
-				mockDB.On("GetPlayer", mock.Anything, tc.id).Return(tc.p, nil)
-			} else {
-				mockDB.On("GetPlayer", mock.Anything, tc.id).Return(nil, db.ErrPlayerNotFound)
-			}
+	for _, tc := range tests {
 
-			if tc.saveEx {
-				if tc.nn == "" {
-					mockDB.On("DeleteNickname", mock.Anything, tc.id, tc.p.Nickname1).Return(tc.saveErr)
-				} else {
-					mockDB.On("SavePlayer", mock.Anything, tc.p).Return(tc.saveErr)
-				}
-			}
-
-			err = ctrl.UpdatePlayerNickname(context.Background(), tc.id, tc.nn)
+		t.Run(tc.name, func(t *testing.T) {
+			err = ctrl.UpdatePlayerNickname(ctx, tc.id, tc.nn)
 			if !errorsEqual(tc.err, err) {
 				t.Errorf("expected err '%v', got '%v'", tc.err, err)
 			}
 
-			mockDB.AssertExpectations(t)
-			if !tc.saveEx {
-				mockDB.AssertNotCalled(t, "SavePlayer", mock.Anything, tc.p)
-			}
-			if tc.nn != "" {
-				mockDB.AssertNotCalled(t, "DeleteNickname", mock.Anything, tc.id)
+			if tc.exNN != "skip" {
+				p, err := ctrl.GetPlayer(ctx, tc.id)
+				if err != nil {
+					t.Errorf("error looking up player to validate nickname: %v", err)
+				}
+				if p.Nickname1 != tc.exNN {
+					t.Errorf("expected nickname: '%s', got: '%s'", tc.exNN, p.Nickname1)
+				}
 			}
 		})
 	}
@@ -210,16 +221,15 @@ func TestAddRankings(t *testing.T) {
 		"simple add": {date: "2024-06-26", expectedID: "0", expectedError: nil},
 	}
 
+	mockSleeper := mocksleeper.Client{}
+	ctrl, err := New(&mockSleeper, testDB.DB)
+	if err != nil {
+		t.Fatalf("error constructing controller: %v", err)
+	}
+
 	// TODO: flesh out tests more
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			mockSleeper := mocksleeper.Client{}
-			mockDB := mockdb.DB{}
-
-			ctrl, err := New(&mockSleeper, &mockDB)
-			if err != nil {
-				t.Fatalf("error constructing controller: %v", err)
-			}
 
 			date, _ := time.Parse(time.DateOnly, tc.date)
 
@@ -236,25 +246,20 @@ func TestAddRankings(t *testing.T) {
 
 func TestUpdatePlayers_success(t *testing.T) {
 	sleeper := &mocksleeper.Client{}
-	db := &mockdb.DB{}
-
-	ctrl, err := New(sleeper, db)
+	ctrl, err := New(sleeper, testDB.DB)
 	if err != nil {
 		t.Fatalf("error creating controller: %v", err)
 	}
 
 	players := []model.Player{
-		{ID: "1", FirstName: "One", LastName: "LastOne", Position: model.POS_QB},
-		{ID: "2", FirstName: "Two", LastName: "LastTwo", Position: model.POS_WR},
-		{ID: "3", FirstName: "Three", LastName: "LastThree", Position: model.POS_RB},
-		{ID: "4", FirstName: "Four", LastName: "LastFour", Position: model.POS_TE},
+		*testutils.TylerLockett,
+		*testutils.JalenHurts,
+		*testutils.CeeDeeLamb,
+		*testutils.TJHockenson,
+		*testutils.BreeceHall,
 	}
 
 	sleeper.On("LoadPlayers").Return(players, nil)
-	db.On("SavePlayer", mock.Anything, &players[0]).Return(nil)
-	db.On("SavePlayer", mock.Anything, &players[1]).Return(nil)
-	db.On("SavePlayer", mock.Anything, &players[2]).Return(nil)
-	db.On("SavePlayer", mock.Anything, &players[3]).Return(nil)
 
 	err = ctrl.UpdatePlayers(context.Background())
 	if err != nil {
@@ -262,14 +267,11 @@ func TestUpdatePlayers_success(t *testing.T) {
 	}
 
 	sleeper.AssertExpectations(t)
-	db.AssertExpectations(t)
 }
 
 func TestUpdatePlayers_sleeperError(t *testing.T) {
 	sleeper := &mocksleeper.Client{}
-	db := &mockdb.DB{}
-
-	ctrl, err := New(sleeper, db)
+	ctrl, err := New(sleeper, testDB.DB)
 	if err != nil {
 		t.Fatalf("error creating controller: %v", err)
 	}
@@ -282,59 +284,24 @@ func TestUpdatePlayers_sleeperError(t *testing.T) {
 	}
 
 	sleeper.AssertExpectations(t)
-	db.AssertNotCalled(t, "SavePlayer", mock.Anything, mock.Anything)
-}
-
-func TestUpdatePlayers_dbError(t *testing.T) {
-	sleeper := &mocksleeper.Client{}
-	db := &mockdb.DB{}
-
-	ctrl, err := New(sleeper, db)
-	if err != nil {
-		t.Fatalf("error creating controller: %v", err)
-	}
-
-	players := []model.Player{
-		{ID: "1", FirstName: "One", LastName: "LastOne", Position: model.POS_QB},
-		{ID: "2", FirstName: "Two", LastName: "LastTwo", Position: model.POS_WR},
-		{ID: "3", FirstName: "Three", LastName: "LastThree", Position: model.POS_RB},
-		{ID: "4", FirstName: "Four", LastName: "LastFour", Position: model.POS_TE},
-	}
-
-	sleeper.On("LoadPlayers").Return(players, nil)
-	db.On("SavePlayer", mock.Anything, &players[0]).Return(nil)
-	db.On("SavePlayer", mock.Anything, &players[1]).Return(errors.New("this error"))
-
-	err = ctrl.UpdatePlayers(context.Background())
-	if !errorsEqual(err, errors.New("error saving player (Two LastTwo): this error")) {
-		t.Errorf("not the expected error: '%v'", err)
-	}
-
-	sleeper.AssertExpectations(t)
-	db.AssertExpectations(t)
 }
 
 func TestRunPeriodicPlayerUpdates(t *testing.T) {
 	sleeper := &mocksleeper.Client{}
-	db := &mockdb.DB{}
-
-	ctrl, err := New(sleeper, db)
+	ctrl, err := New(sleeper, testDB.DB)
 	if err != nil {
 		t.Fatalf("error creating controller: %v", err)
 	}
 
 	players := []model.Player{
-		{ID: "1", FirstName: "One", LastName: "LastOne", Position: model.POS_QB},
-		{ID: "2", FirstName: "Two", LastName: "LastTwo", Position: model.POS_WR},
-		{ID: "3", FirstName: "Three", LastName: "LastThree", Position: model.POS_RB},
-		{ID: "4", FirstName: "Four", LastName: "LastFour", Position: model.POS_TE},
+		*testutils.TylerLockett,
+		*testutils.JalenHurts,
+		*testutils.CeeDeeLamb,
+		*testutils.TJHockenson,
+		*testutils.BreeceHall,
 	}
 
 	sleeper.On("LoadPlayers").Return(players, nil).Times(3)
-	db.On("SavePlayer", mock.Anything, &players[0]).Return(nil).Times(3)
-	db.On("SavePlayer", mock.Anything, &players[1]).Return(nil).Times(3)
-	db.On("SavePlayer", mock.Anything, &players[2]).Return(nil).Times(3)
-	db.On("SavePlayer", mock.Anything, &players[3]).Return(nil).Times(3)
 
 	shutdown := make(chan bool, 1)
 	go func() {
@@ -348,7 +315,6 @@ func TestRunPeriodicPlayerUpdates(t *testing.T) {
 	wg.Wait()
 
 	sleeper.AssertExpectations(t)
-	db.AssertExpectations(t)
 }
 
 func errorsEqual(e1, e2 error) bool {
