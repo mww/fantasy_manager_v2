@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -12,41 +13,17 @@ import (
 )
 
 var (
-	TylerLockett = &model.Player{
-		ID:        "2374",
-		FirstName: "Tyler",
-		LastName:  "Lockett",
-		Position:  model.POS_WR,
-		Team:      model.TEAM_SEA,
-	}
-	JalenHurts = &model.Player{
-		ID:        "6904",
-		FirstName: "Jalen",
-		LastName:  "Hurts",
-		Position:  model.POS_QB,
-		Team:      model.TEAM_PHI,
-	}
-	CeeDeeLamb = &model.Player{
-		ID:        "6786",
-		FirstName: "CeeDee",
-		LastName:  "Lamb",
-		Position:  model.POS_WR,
-		Team:      model.TEAM_DAL,
-	}
-	TJHockenson = &model.Player{
-		ID:        "5844",
-		FirstName: "T.J.",
-		LastName:  "Hockenson",
-		Position:  model.POS_TE,
-		Team:      model.TEAM_MIN,
-	}
-	BreeceHall = &model.Player{
-		ID:        "8155",
-		FirstName: "Breece",
-		LastName:  "Hall",
-		Position:  model.POS_RB,
-		Team:      model.TEAM_NYJ,
-	}
+	IDLockett   = "2374"
+	IDHurts     = "6904"
+	IDLamb      = "6786"
+	IDHockenson = "5844"
+	IDHall      = "8155"
+	IDJefferson = "6794"
+	IDMcCaffrey = "4034"
+	IDChase     = "7564"
+	IDChubb     = "4988"
+	IDKelce     = "1466"
+	IDHill      = "3321"
 )
 
 type TestDB struct {
@@ -80,23 +57,61 @@ func (db *TestDB) Shutdown() {
 }
 
 func InsertTestPlayers(db db.DB) error {
-	players := []*model.Player{
-		TylerLockett,
-		JalenHurts,
-		CeeDeeLamb,
-		TJHockenson,
-		BreeceHall,
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	players, err := GetPlayersForTest()
+	if err != nil {
+		return err
+	}
 	for _, p := range players {
-		err := db.SavePlayer(ctx, p)
+		err := db.SavePlayer(ctx, &p)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func GetPlayersForTest() ([]model.Player, error) {
+	players := []struct {
+		id string
+		f  string // first name
+		l  string // last name
+		p  string // position
+		t  string // team
+	}{
+		{id: IDLockett, f: "Tyler", l: "Lockett", p: "WR", t: "SEA"},
+		{id: IDHurts, f: "Jalen", l: "Hurts", p: "QB", t: "PHI"},
+		{id: IDLamb, f: "CeeDee", l: "Lamb", p: "WR", t: "DAL"},
+		{id: IDHockenson, f: "T.J.", l: "Hockenson", p: "TE", t: "MIN"},
+		{id: IDHall, f: "Breece", l: "Hall", p: "RB", t: "NYJ"},
+		{id: IDJefferson, f: "Justin", l: "Jefferson", p: "WR", t: "MIN"},
+		{id: IDMcCaffrey, f: "Christian", l: "McCaffrey", p: "RB", t: "SFO"},
+		{id: IDChase, f: "Ja'Marr", l: "Chase", p: "WR", t: "CIN"},
+		{id: IDChubb, f: "Nick", l: "Chubb", p: "RB", t: "CLE"},
+		{id: IDKelce, f: "Travis", l: "Kelce", p: "TE", t: "KCC"},
+		{id: IDHill, f: "Tyreek", l: "Hill", p: "WR", t: "MIA"},
+	}
+
+	result := make([]model.Player, len(players))
+	for i, p := range players {
+		pos := model.ParsePosition(p.p)
+		if pos == model.POS_UNKNOWN {
+			return nil, fmt.Errorf("unknown position for player %s", p.id)
+		}
+		team := model.ParseTeam(p.t)
+		if team == model.TEAM_FA {
+			return nil, fmt.Errorf("unknown team for player %s", p.id)
+		}
+
+		result[i].ID = p.id
+		result[i].FirstName = p.f
+		result[i].LastName = p.l
+		result[i].Position = pos
+		result[i].Team = team
+	}
+
+	return result, nil
 }

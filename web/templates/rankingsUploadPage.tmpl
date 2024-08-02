@@ -1,7 +1,7 @@
 <h1>Upload new rankings data</h1>
 
 <div>
-Download rankings from <a href="https://www.fantasypros.com/nfl/rankings/ros-half-point-ppr-overall.php">fantasypros</a>
+Download rankings from <a target="_blank" href="https://www.fantasypros.com/nfl/rankings/ros-half-point-ppr-overall.php">fantasypros</a>
 
 <div id="rankings">
     <form enctype="multipart/form-data" action="/players/rankings" method="post">
@@ -19,3 +19,18 @@ Download rankings from <a href="https://www.fantasypros.com/nfl/rankings/ros-hal
         </div>
     </form>
 </div>
+
+<br/><br/>
+{{ if . }}
+<div>
+    <ul>
+        {{ range $r := . }}
+            <li><a href="/players/rankings/{{ $r.ID }}">{{ $r.Date | date }}</a></li>
+        {{ end }}
+    </ul>
+</div>
+{{ else }}
+<div>
+    <span>No rankings found</span>
+</div>
+{{ end }}

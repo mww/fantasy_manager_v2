@@ -6,7 +6,7 @@ import (
 )
 
 type NFLTeam struct {
-	name   string
+	name   string // The 3 letter version of the team. e.g. NYG for New York Giants
 	loc    string
 	mascot string
 	short  string   // If there is short form of the name, e.g. SF for SFO
@@ -69,7 +69,7 @@ var (
 	TEAM_DEN *NFLTeam = &NFLTeam{name: "DEN", loc: "Denver", mascot: "Broncos"}
 	TEAM_HOU *NFLTeam = &NFLTeam{name: "HOU", loc: "Houston", mascot: "Texans"}
 	TEAM_IND *NFLTeam = &NFLTeam{name: "IND", loc: "Indianapolis", mascot: "Colts", nick: []string{"Indy"}}
-	TEAM_JAC *NFLTeam = &NFLTeam{name: "JAC", loc: "Jacksonville", mascot: "Jaguars", nick: []string{"Jags"}}
+	TEAM_JAC *NFLTeam = &NFLTeam{name: "JAC", loc: "Jacksonville", mascot: "Jaguars", short: "JAX", nick: []string{"Jags"}}
 	TEAM_KCC *NFLTeam = &NFLTeam{name: "KCC", loc: "Kansas City", mascot: "Chiefs", short: "KC"}
 	TEAM_LVR *NFLTeam = &NFLTeam{name: "LVR", loc: "Las Vegas", mascot: "Raiders", short: "LV"}
 	TEAM_LAC *NFLTeam = &NFLTeam{name: "LAC", loc: "Los Angeles", mascot: "Chargers"}
@@ -82,6 +82,9 @@ var (
 	teamMap map[string]*NFLTeam = buildTeamMap()
 )
 
+// ParseTeam returns the team NFL team associated with the name. Any of the short name, long name, or location
+// should return a match. e.g. PIT, Pittsburgh, or Steelers should all be valid. If no match is found then
+// TEAM_FA is returned.
 func ParseTeam(name string) *NFLTeam {
 	t := teamMap[strings.ToLower(name)]
 	if t == nil {

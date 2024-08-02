@@ -76,6 +76,9 @@ func TestParseTeam(t *testing.T) {
 
 		// Unknown
 		{input: "Puyallup", expected: TEAM_FA},
+
+		// Sleeper
+		{input: "JAX", expected: TEAM_JAC},
 	}
 
 	for _, tc := range tests {

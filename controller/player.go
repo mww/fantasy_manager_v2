@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"regexp"
 	"strings"
@@ -65,15 +64,6 @@ func (c *controller) UpdatePlayers(ctx context.Context) error {
 
 	log.Printf("load players finished, took %v", time.Since(start))
 	return nil
-}
-
-// Add a new rankings for players. This will parse the data from the reader (in CSV format) and
-// create a new rankings data point. Returns the id of the new rankings and an error if there
-// was one.
-func (c *controller) AddRankings(r io.Reader, date time.Time) (string, error) {
-	// TODO
-	log.Printf("in AddRankings()")
-	return "0", nil
 }
 
 func (c *controller) RunPeriodicPlayerUpdates(frequency time.Duration, shutdown chan bool, wg *sync.WaitGroup) {

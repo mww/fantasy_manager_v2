@@ -1,3 +1,15 @@
 <h1>Rankings</h1>
 
-<div>TODO</div>
+<h3>{{ .Date | date }}</h3>
+
+<table>
+    <tr><th>Rank</th><th>Name</th><th>Position</th><th>Team</th></tr>
+    {{ range $p := .Players }}
+        <tr>
+            <td>{{ $p.Rank }}</td>
+            <td><a href="/players/{{ $p.ID }}">{{ $p.FirstName }} {{ $p.LastName }}</a></td>
+            <td>{{ $p.Position }}</td>
+            <td>{{ $p.Team.Friendly }}</td>
+        </tr>
+    {{ end }}
+</table>

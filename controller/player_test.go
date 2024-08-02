@@ -3,8 +3,6 @@ package controller
 import (
 	"context"
 	"errors"
-	"fmt"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -15,28 +13,6 @@ import (
 	"github.com/mww/fantasy_manager_v2/sleeper/mocksleeper"
 	"github.com/mww/fantasy_manager_v2/testutils"
 )
-
-// A global testDB instance to use for all of the tests instead of setting up a new one each time.
-var testDB *testutils.TestDB
-
-// TestMain controls the main for the tests and allows for setup and shutdown of the tests
-func TestMain(m *testing.M) {
-	defer func() {
-		// Catch all panics to make sure the shutdown is successfully run
-		if r := recover(); r != nil {
-			if testDB != nil {
-				testDB.Shutdown()
-			}
-			fmt.Println("panic")
-		}
-	}()
-
-	// Setup the global testDB variable
-	testDB = testutils.NewTestDB()
-	defer testDB.Shutdown()
-	code := m.Run()
-	os.Exit(code)
-}
 
 func TestGetPositionFromQuery(t *testing.T) {
 	tests := map[string]struct {
@@ -158,14 +134,14 @@ func TestUpdatePlayerNickname(t *testing.T) {
 	}{
 		{
 			name: "simple add",
-			id:   testutils.TylerLockett.ID,
+			id:   testutils.IDLockett,
 			nn:   "Hot Locket",
 			err:  nil,
 			exNN: "Hot Locket",
 		},
 		{
 			name: "nn already set",
-			id:   testutils.TylerLockett.ID,
+			id:   testutils.IDLockett,
 			nn:   "Hot Locket",
 			err:  errors.New("no updated needed"),
 			exNN: "Hot Locket",
@@ -179,7 +155,7 @@ func TestUpdatePlayerNickname(t *testing.T) {
 		},
 		{
 			name: "delete nickname",
-			id:   testutils.TylerLockett.ID,
+			id:   testutils.IDLockett,
 			nn:   "",
 			err:  nil,
 			exNN: "",
@@ -212,38 +188,6 @@ func TestUpdatePlayerNickname(t *testing.T) {
 	}
 }
 
-func TestAddRankings(t *testing.T) {
-	tests := map[string]struct {
-		date          string
-		expectedID    string
-		expectedError error
-	}{
-		"simple add": {date: "2024-06-26", expectedID: "0", expectedError: nil},
-	}
-
-	mockSleeper := mocksleeper.Client{}
-	ctrl, err := New(&mockSleeper, testDB.DB)
-	if err != nil {
-		t.Fatalf("error constructing controller: %v", err)
-	}
-
-	// TODO: flesh out tests more
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-
-			date, _ := time.Parse(time.DateOnly, tc.date)
-
-			id, err := ctrl.AddRankings(nil, date)
-			if !errorsEqual(err, tc.expectedError) {
-				t.Errorf("error not the same as expected. wanted: %v, got: %v", tc.expectedError, err)
-			}
-			if id != tc.expectedID {
-				t.Errorf("id not the same as expected. wanted: %s, got: %s", tc.expectedID, id)
-			}
-		})
-	}
-}
-
 func TestUpdatePlayers_success(t *testing.T) {
 	sleeper := &mocksleeper.Client{}
 	ctrl, err := New(sleeper, testDB.DB)
@@ -251,12 +195,9 @@ func TestUpdatePlayers_success(t *testing.T) {
 		t.Fatalf("error creating controller: %v", err)
 	}
 
-	players := []model.Player{
-		*testutils.TylerLockett,
-		*testutils.JalenHurts,
-		*testutils.CeeDeeLamb,
-		*testutils.TJHockenson,
-		*testutils.BreeceHall,
+	players, err := testutils.GetPlayersForTest()
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	sleeper.On("LoadPlayers").Return(players, nil)
@@ -293,12 +234,9 @@ func TestRunPeriodicPlayerUpdates(t *testing.T) {
 		t.Fatalf("error creating controller: %v", err)
 	}
 
-	players := []model.Player{
-		*testutils.TylerLockett,
-		*testutils.JalenHurts,
-		*testutils.CeeDeeLamb,
-		*testutils.TJHockenson,
-		*testutils.BreeceHall,
+	players, err := testutils.GetPlayersForTest()
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	sleeper.On("LoadPlayers").Return(players, nil).Times(3)

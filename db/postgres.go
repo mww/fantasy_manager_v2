@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/itbasis/go-clock"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mww/fantasy_manager_v2/model"
@@ -154,6 +156,173 @@ func (db *postgresDB) Search(ctx context.Context, q string, pos model.Position, 
 	return results, nil
 }
 
+func (db *postgresDB) ListRankings(ctx context.Context) ([]model.Ranking, error) {
+	const query = "SELECT id, ranking_date FROM rankings ORDER BY ranking_date DESC LIMIT 25"
+
+	rows, err := db.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("error querying for rankings: %w", err)
+	}
+
+	results := make([]model.Ranking, 0, 25)
+	for rows.Next() {
+		r, err := scanRanking(rows)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, *r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error on rows: %w", err)
+	}
+
+	return results, nil
+}
+
+func (db *postgresDB) GetRanking(ctx context.Context, id int32) (*model.Ranking, error) {
+	const metadataQuery = "SELECT id, ranking_date FROM rankings WHERE id=@id"
+	const rankingsQuery = `SELECT player_rankings.ranking, players.id, players.name_first, players.name_last, players.position, players.team
+							FROM player_rankings INNER JOIN players ON player_rankings.player_id=players.id
+							WHERE player_rankings.ranking_id=@id
+							ORDER BY player_rankings.ranking ASC`
+
+	args := pgx.NamedArgs{
+		"id": id,
+	}
+	row := db.pool.QueryRow(ctx, metadataQuery, args)
+	ranking, err := scanRanking(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("no ranking with specified id found")
+		}
+		return nil, err
+	}
+	ranking.Players = make([]model.RankingPlayer, 0, 100)
+
+	rows, err := db.pool.Query(ctx, rankingsQuery, args)
+	if err != nil {
+		return nil, fmt.Errorf("error querying for rankings data: %w", err)
+	}
+
+	for rows.Next() {
+		p := model.RankingPlayer{}
+		var pos, team string
+		if err := rows.Scan(&p.Rank, &p.ID, &p.FirstName, &p.LastName, &pos, &team); err != nil {
+			return nil, fmt.Errorf("error reading rankings data: %w", err)
+		}
+		p.Position = model.ParsePosition(pos)
+		p.Team = model.ParseTeam(team)
+		ranking.Players = append(ranking.Players, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error reading results of rankings query: %w", err)
+	}
+
+	if len(ranking.Players) == 0 {
+		return nil, fmt.Errorf("ranking with id %d has no actual rankings - this should not happen", ranking.ID)
+	}
+
+	return ranking, nil
+}
+
+func (db *postgresDB) AddRanking(ctx context.Context, date time.Time, rankings map[string]int32) (*model.Ranking, error) {
+	const insertRankingQuery = "INSERT INTO rankings(ranking_date) VALUES (@date) RETURNING id"
+	const insertPlayerRankingQuery = "INSERT INTO player_rankings(ranking_id, player_id, ranking) VALUES (@rankingID, @playerID, @ranking)"
+
+	if date.IsZero() {
+		return nil, errors.New("rankings date must be provided")
+	}
+	if len(rankings) == 0 {
+		return nil, errors.New("rankings cannot be empty")
+	}
+
+	tx, err := db.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	r := &model.Ranking{
+		Date:    date,
+		Players: make([]model.RankingPlayer, 0, 100),
+	}
+
+	err = tx.QueryRow(ctx, insertRankingQuery, pgx.NamedArgs{"date": date}).Scan(&r.ID)
+	if err != nil {
+		return nil, fmt.Errorf("error inserting ranking into rankings table: %w", err)
+	}
+	if r.ID <= 0 {
+		return nil, fmt.Errorf("did not get a valid rankingID, got: %d", r.ID)
+	}
+
+	for playerID, ranking := range rankings {
+		args := pgx.NamedArgs{
+			"rankingID": r.ID,
+			"playerID":  playerID,
+			"ranking":   ranking,
+		}
+		if _, err := tx.Exec(ctx, insertPlayerRankingQuery, args); err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) {
+				if pgErr.ConstraintName == "player_rankings_player_id_fkey" {
+					return nil, fmt.Errorf("no player with id: %s", playerID)
+				}
+			}
+			return nil, fmt.Errorf("error inserting player ranking: %w", err)
+		}
+		rp := model.RankingPlayer{Rank: ranking, ID: playerID}
+		r.Players = append(r.Players, rp)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error commiting add rankings transactions: %w", err)
+	}
+
+	// Sort r.Players by rank
+	slices.SortFunc(r.Players, func(a, b model.RankingPlayer) int {
+		return int(a.Rank - b.Rank)
+	})
+
+	return r, nil
+}
+
+func (db *postgresDB) DeleteRanking(ctx context.Context, id int32) error {
+	const deleteMetadataQuery = "DELETE FROM rankings WHERE id=@id"
+	const deleteRankingsQuery = "DELETE FROM player_rankings WHERE ranking_id=@id"
+
+	tx, err := db.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("error begining transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	args := pgx.NamedArgs{
+		"id": id,
+	}
+	tag, err := tx.Exec(ctx, deleteRankingsQuery, args)
+	if err != nil {
+		return fmt.Errorf("error deleting from player_rankings: %w", err)
+	}
+	if tag.RowsAffected() <= 0 {
+		return fmt.Errorf("no rows deleted from player_rankings for ranking_id %d", id)
+	}
+
+	tag2, err2 := tx.Exec(ctx, deleteMetadataQuery, args)
+	if err2 != nil {
+		return fmt.Errorf("error deleting from rankings: %w", err2)
+	}
+	if tag2.RowsAffected() != 1 {
+		return fmt.Errorf("wrong number of rows affected when deleting ranking %d, expected 1, got %d", id, tag2.RowsAffected())
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("error commiting delete ranking transaction: %w", err)
+	}
+
+	return nil
+}
+
 func (db *postgresDB) getPlayer(ctx context.Context, id string) (*model.Player, error) {
 	const query = `SELECT id, yahoo_id, name_first, name_last, nickname1,
 				  		position, team, weight_lb, height_in, birth_date,
@@ -221,6 +390,22 @@ func scanPlayer(row pgx.Row) (*model.Player, error) {
 	result.Updated = updated.Time
 
 	return &result, nil
+}
+
+func scanRanking(row pgx.Row) (*model.Ranking, error) {
+	var r model.Ranking
+	var date pgtype.Timestamptz
+
+	err := row.Scan(&r.ID, &date)
+	if err != nil {
+		return nil, fmt.Errorf("error scanning row: %w", err)
+	}
+	if !date.Valid {
+		return nil, fmt.Errorf("ranking date is not valid: %w", err)
+	}
+	r.Date = date.Time.UTC()
+
+	return &r, nil
 }
 
 func (db *postgresDB) getChangesByID(ctx context.Context, id string) ([]model.Change, error) {

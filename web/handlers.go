@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -91,16 +92,32 @@ func updatePlayerHandler(ctrl controller.C, render *render.Render) http.HandlerF
 	}
 }
 
-func rankingsRootHandler(_ controller.C, render *render.Render) http.HandlerFunc {
+func rankingsRootHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		render.HTML(w, http.StatusOK, "rankingsUploadPage", nil)
+		rankings, err := ctrl.ListRankings(r.Context())
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err)
+			return
+		}
+		render.HTML(w, http.StatusOK, "rankingsUploadPage", rankings)
 	}
 }
 
-// TODO
-func rankingsHandler(_ controller.C, render *render.Render) http.HandlerFunc {
+func rankingsHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		render.HTML(w, http.StatusOK, "rankings", nil)
+		rankingsID := chi.URLParam(r, "rankingID")
+		id, err := strconv.Atoi(rankingsID)
+		if err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", fmt.Sprintf("error parsing ranking id: %v", err))
+			return
+		}
+		ranking, err := ctrl.GetRanking(r.Context(), int32(id))
+		if err != nil {
+			render.HTML(w, http.StatusNotFound, "404", fmt.Sprintf("ranking not found: %v", err))
+			return
+		}
+
+		render.HTML(w, http.StatusOK, "rankings", ranking)
 	}
 }
 
@@ -130,12 +147,12 @@ func rankingsUploadHandler(ctrl controller.C, render *render.Render) http.Handle
 			return
 		}
 
-		id, err := ctrl.AddRankings(file, t)
+		id, err := ctrl.AddRanking(r.Context(), file, t)
 		if err != nil {
 			render.HTML(w, http.StatusInternalServerError, "500", err.Error())
 			return
 		}
-		http.Redirect(w, r, fmt.Sprintf("/players/rankings/%s", id), http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("/players/rankings/%d", id), http.StatusSeeOther)
 	}
 }
 

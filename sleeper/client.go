@@ -24,7 +24,7 @@ func New() (Client, error) {
 	c := &client{
 		url: SleeperURL,
 		httpClient: &http.Client{
-			Timeout: time.Second * 10,
+			Timeout: 1 * time.Minute,
 		},
 	}
 	return c, nil

@@ -127,7 +127,7 @@ func TestDB_search(t *testing.T) {
 	// Change the player name since default player returned by getPlayer is used in several places
 	// and may be in the DB multiple times.
 	p := getPlayer()
-	p.ID = "9999" // Set a static ID since we only ever want one player with this name in the DB
+	p.ID = "9998" // Set a static ID since we only ever want one player with this name in the DB
 	p.FirstName = "DK"
 	p.LastName = "Metcalf"
 	p.Nickname1 = ""
@@ -217,6 +217,195 @@ func TestNicknames(t *testing.T) {
 	assertPlayerChange(t, "change[2]", "Nickname1", "", "nickname", &p4.Changes[2])
 }
 
+// Test all of the various ranking operations, adding, getting, listing, and deleting
+func TestRankings(t *testing.T) {
+	p1 := getPlayerWithName("Justin", "Jefferson")
+	p2 := getPlayerWithName("Ja'Marr", "Chase")
+	p3 := getPlayerWithName("Tyreek", "Hill")
+	p4 := getPlayerWithName("Stefon", "Diggs")
+	p5 := getPlayerWithName("A.J.", "Brown")
+
+	ctx := context.Background()
+	e1 := testDB.SavePlayer(ctx, p1)
+	e2 := testDB.SavePlayer(ctx, p2)
+	e3 := testDB.SavePlayer(ctx, p3)
+	e4 := testDB.SavePlayer(ctx, p4)
+	e5 := testDB.SavePlayer(ctx, p5)
+	if err := errors.Join(e1, e2, e3, e4, e5); err != nil {
+		t.Fatalf("error inserting players: %v", err)
+	}
+
+	// Before any rankings are added, try to list to ensure that we get back an err
+	r, err := testDB.ListRankings(ctx)
+	assertError(t, "TestRankings, ListRankings() empty", errors.New("no rankings found"), err)
+	assertTrue(t, "r == nil", r == nil)
+
+	// The rankings to insert into the database
+	rankings := []struct {
+		date     string
+		rankings map[string]int32
+	}{
+		{
+			date:     "2023-09-07",
+			rankings: map[string]int32{p1.ID: 1, p2.ID: 2, p3.ID: 3, p4.ID: 4, p5.ID: 5},
+		},
+		{
+			date:     "2023-09-13",
+			rankings: map[string]int32{p1.ID: 2, p2.ID: 1, p3.ID: 5, p4.ID: 4, p5.ID: 3},
+		},
+		{
+			date:     "2023-09-27",
+			rankings: map[string]int32{p1.ID: 1, p2.ID: 2, p3.ID: 5, p4.ID: 4, p5.ID: 3},
+		},
+		{
+			// Out of order on purpose to ensure that results are sorted by date correctly in ListRankings()
+			date:     "2023-09-20",
+			rankings: map[string]int32{p1.ID: 1, p2.ID: 2, p3.ID: 3, p4.ID: 4, p5.ID: 5},
+		},
+		{
+			date:     "2023-10-04",
+			rankings: map[string]int32{p1.ID: 5, p2.ID: 4, p3.ID: 3, p4.ID: 2, p5.ID: 1},
+		},
+	}
+
+	for _, r := range rankings {
+		d, err := time.ParseInLocation(time.DateOnly, r.date, time.UTC)
+		if err != nil {
+			t.Fatalf("error parsing ranking date: %v", err)
+		}
+
+		_, err = testDB.AddRanking(ctx, d, r.rankings)
+		if err != nil {
+			t.Fatalf("error adding ranking for test: %v", err)
+		}
+	}
+
+	listResults, err := testDB.ListRankings(ctx)
+	if err != nil {
+		t.Fatalf("err was expected to be nil: %v", err)
+	}
+
+	expectedDates := []string{"2023-10-04", "2023-09-27", "2023-09-20", "2023-09-13", "2023-09-07"}
+	assertEquals(t, "len(listResults)", 5, len(listResults))
+	for i := 0; i < len(listResults); i++ {
+		assertEquals(t, fmt.Sprintf("listResults[%d].Date", i), expectedDates[i], listResults[i].Date.Format(time.DateOnly))
+		assertTrue(t, fmt.Sprintf("listResults[%d].ID > 0", i), listResults[i].ID > 0)
+		assertTrue(t, fmt.Sprintf("listResults[%d].Players == nil", i), listResults[i].Players == nil)
+	}
+
+	// Get the first ranking
+	getResult, err := testDB.GetRanking(ctx, listResults[0].ID)
+	if err != nil {
+		t.Fatalf("error getting ranking by id: %v", err)
+	}
+	assertEquals(t, "getResult.Date", "2023-10-04", getResult.Date.Format(time.DateOnly))
+	expectedRankings := []model.RankingPlayer{
+		{Rank: 1, ID: p5.ID, FirstName: p5.FirstName, LastName: p5.LastName, Position: p5.Position, Team: p5.Team},
+		{Rank: 2, ID: p4.ID, FirstName: p4.FirstName, LastName: p4.LastName, Position: p4.Position, Team: p4.Team},
+		{Rank: 3, ID: p3.ID, FirstName: p3.FirstName, LastName: p3.LastName, Position: p3.Position, Team: p3.Team},
+		{Rank: 4, ID: p2.ID, FirstName: p2.FirstName, LastName: p2.LastName, Position: p2.Position, Team: p2.Team},
+		{Rank: 5, ID: p1.ID, FirstName: p1.FirstName, LastName: p1.LastName, Position: p1.Position, Team: p1.Team},
+	}
+	assertTrue(t, "expectedRanking == getResult.Players", reflect.DeepEqual(expectedRankings, getResult.Players))
+
+	// Delete the ranking
+	if err := testDB.DeleteRanking(ctx, getResult.ID); err != nil {
+		t.Fatalf("unexpected error when deleting ranking: %v", err)
+	}
+
+	// Now get the ranking again to ensure it is deleted
+	getResult2, err := testDB.GetRanking(ctx, getResult.ID)
+	assertError(t, "GetRanking() - deleted ranking", errors.New("no ranking with specified id found"), err)
+	assertTrue(t, "GetRanking() - deleted ranking", getResult2 == nil)
+
+	// Delete a ranking that does not exist
+	if err := testDB.DeleteRanking(ctx, getResult.ID); err == nil {
+		t.Fatalf("expected error but got none when deleting a ranking that was already deleted")
+	}
+
+	// Delete all rankings so the test can be run again if needed.
+	// e.g. with `go test --count=2`
+	rankingsList, err := testDB.ListRankings(ctx)
+	if err != nil {
+		t.Fatalf("error cleaning up rankings table: %v", err)
+	}
+	for _, r := range rankingsList {
+		if err := testDB.DeleteRanking(ctx, r.ID); err != nil {
+			t.Fatalf("error cleaning up ranking: %v", err)
+		}
+	}
+}
+
+func TestAddRanking_negativeCases(t *testing.T) {
+	p1 := getPlayerWithName("Justin", "Jefferson")
+	p2 := getPlayerWithName("Ja'Marr", "Chase")
+	p3 := getPlayerWithName("Tyreek", "Hill")
+	p4 := getPlayerWithName("Stefon", "Diggs")
+	p5 := getPlayerWithName("A.J.", "Brown")
+
+	ctx := context.Background()
+	e1 := testDB.SavePlayer(ctx, p1)
+	e2 := testDB.SavePlayer(ctx, p2)
+	e3 := testDB.SavePlayer(ctx, p3)
+	e4 := testDB.SavePlayer(ctx, p4)
+	e5 := testDB.SavePlayer(ctx, p5)
+	if err := errors.Join(e1, e2, e3, e4, e5); err != nil {
+		t.Fatalf("error inserting players: %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		date     string
+		rankings map[string]int32
+		err      error
+	}{
+		{
+			name:     "zero date",
+			date:     "",
+			rankings: map[string]int32{p1.ID: 4, p2.ID: 10, p3.ID: 27, p4.ID: 99, p5.ID: 132},
+			err:      errors.New("rankings date must be provided"),
+		},
+		{
+			name:     "nil rankings",
+			date:     "2023-09-01",
+			rankings: nil,
+			err:      errors.New("rankings cannot be empty"),
+		},
+		{
+			name:     "empty rankings",
+			date:     "2023-09-01",
+			rankings: map[string]int32{},
+			err:      errors.New("rankings cannot be empty"),
+		},
+		{
+			name:     "invalid player id",
+			date:     "2023-09-01",
+			rankings: map[string]int32{p1.ID: 4, p2.ID: 10, p3.ID: 27, "9999": 99, p5.ID: 132},
+			err:      errors.New("no player with id: 9999"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var rankingDate time.Time
+			var err error
+
+			if tc.date != "" {
+				rankingDate, err = time.ParseInLocation(time.DateOnly, tc.date, time.UTC)
+				if err != nil {
+					t.Errorf("error parsing date in test %s: %v", tc.name, err)
+				}
+			}
+
+			res, err := testDB.AddRanking(ctx, rankingDate, tc.rankings)
+			assertError(t, tc.name, tc.err, err)
+			if res != nil {
+				t.Error("expected res to be nil")
+			}
+		})
+	}
+}
+
 func getPlayer() *model.Player {
 	id := atomic.AddInt32(&idCtr, 1)
 
@@ -240,6 +429,18 @@ func getPlayer() *model.Player {
 	}
 }
 
+func getPlayerWithName(first, last string) *model.Player {
+	id := atomic.AddInt32(&idCtr, 1)
+
+	return &model.Player{
+		ID:        fmt.Sprintf("%d", id),
+		FirstName: first,
+		LastName:  last,
+		Position:  model.POS_WR,
+		Team:      model.TEAM_DET,
+	}
+}
+
 func assertFatalf(t *testing.T, c bool, f string, args ...any) {
 	if !c {
 		t.Fatalf(f, args...)
@@ -249,6 +450,25 @@ func assertFatalf(t *testing.T, c bool, f string, args ...any) {
 func assertEquals(t *testing.T, field string, expected, actual any) {
 	if expected != actual {
 		t.Errorf("%s - expected: '%s', got: '%s'", field, expected, actual)
+	}
+}
+
+func assertTrue(t *testing.T, field string, cond bool) {
+	if !cond {
+		t.Errorf("%s - expected to be true but it was false", field)
+	}
+}
+
+func assertError(t *testing.T, tcName string, e1, e2 error) {
+	if e1 == nil && e2 == nil {
+		return
+	}
+	if (e1 != nil && e2 == nil) || (e1 == nil && e2 != nil) {
+		t.Errorf("unexpected error in %s, expected: %v, got: %v", tcName, e1, e2)
+		return
+	}
+	if e1.Error() != e2.Error() {
+		t.Errorf("errors are not equal in %s, expected: %v, got: %v", tcName, e1, e2)
 	}
 }
 

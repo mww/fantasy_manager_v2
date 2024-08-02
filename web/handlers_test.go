@@ -21,7 +21,7 @@ func TestRankingsUploadHandler_success(t *testing.T) {
 	mockCtrl := &mockcontroller.C{}
 
 	d, _ := time.Parse(time.DateOnly, "2024-07-29")
-	mockCtrl.On("AddRankings", mock.Anything, d).Return("123", nil)
+	mockCtrl.On("AddRanking", mock.Anything, mock.Anything, d).Return(123, nil)
 
 	resp := runRankingsUploadHandlerTest(t, mockCtrl, "text/csv", "2024-07-29")
 	defer resp.Body.Close()
@@ -55,7 +55,7 @@ func TestRankingsUploadHandler_badFileContentType(t *testing.T) {
 		t.Errorf("response body does not contain expected string")
 	}
 
-	mockCtrl.AssertNotCalled(t, "AddRankings", mock.Anything, mock.Anything)
+	mockCtrl.AssertNotCalled(t, "AddRanking", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestRankingsUploadHandler_badDate(t *testing.T) {
@@ -77,14 +77,14 @@ func TestRankingsUploadHandler_badDate(t *testing.T) {
 		t.Errorf("response body does not contain expected string")
 	}
 
-	mockCtrl.AssertNotCalled(t, "AddRankings", mock.Anything, mock.Anything)
+	mockCtrl.AssertNotCalled(t, "AddRanking", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestRankingsUploadHandler_errorCallingAddRankings(t *testing.T) {
 	mockCtrl := &mockcontroller.C{}
 
 	d, _ := time.Parse(time.DateOnly, "2024-02-14")
-	mockCtrl.On("AddRankings", mock.Anything, d).Return("", errors.New("Error with AddRankings"))
+	mockCtrl.On("AddRanking", mock.Anything, mock.Anything, d).Return(0, errors.New("Error with AddRankings"))
 
 	resp := runRankingsUploadHandlerTest(t, mockCtrl, "text/csv", "2024-02-14")
 	defer resp.Body.Close()
@@ -98,7 +98,7 @@ func TestRankingsUploadHandler_errorCallingAddRankings(t *testing.T) {
 		t.Fatalf("error response body: %v", err)
 	}
 
-	if !strings.Contains(string(b), "Error with AddRankings") {
+	if !strings.Contains(string(b), "Error with AddRanking") {
 		t.Errorf("response body does not contain expected string")
 	}
 
