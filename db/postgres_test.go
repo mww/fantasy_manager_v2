@@ -237,8 +237,10 @@ func TestRankings(t *testing.T) {
 
 	// Before any rankings are added, try to list to ensure that we get back an err
 	r, err := testDB.ListRankings(ctx)
-	assertError(t, "TestRankings, ListRankings() empty", errors.New("no rankings found"), err)
-	assertTrue(t, "r == nil", r == nil)
+	if err != nil {
+		t.Errorf("expected err to be nil, but was: %v", err)
+	}
+	assertEquals(t, "len(r)", 0, len(r))
 
 	// The rankings to insert into the database
 	rankings := []struct {
