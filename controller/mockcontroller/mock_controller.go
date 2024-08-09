@@ -46,11 +46,36 @@ func (c *C) UpdatePlayers(ctx context.Context) error {
 	return args.Error(0)
 }
 
-func (c *C) AddRankings(r io.Reader, date time.Time) (string, error) {
-	args := c.Called(r, date)
-	return args.String(0), args.Error(1)
-}
-
 func (c *C) RunPeriodicPlayerUpdates(frequency time.Duration, shutdown chan bool, wg *sync.WaitGroup) {
 	c.Called(frequency, shutdown, wg)
+}
+
+func (c *C) AddRanking(ctx context.Context, r io.Reader, date time.Time) (int32, error) {
+	args := c.Called(ctx, r, date)
+	return int32(args.Int(0)), args.Error(1)
+}
+
+func (c *C) GetRanking(ctx context.Context, id int32) (*model.Ranking, error) {
+	args := c.Called(ctx, id)
+
+	var res *model.Ranking
+	if args.Get(0) != nil {
+		res = args.Get(0).(*model.Ranking)
+	}
+	return res, args.Error(1)
+}
+
+func (c *C) DeleteRanking(ctx context.Context, id int32) error {
+	args := c.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (c *C) ListRankings(ctx context.Context) ([]model.Ranking, error) {
+	args := c.Called(ctx)
+
+	var res []model.Ranking
+	if args.Get(0) != nil {
+		res = args.Get(0).([]model.Ranking)
+	}
+	return res, args.Error(1)
 }

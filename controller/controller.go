@@ -23,12 +23,15 @@ type C interface {
 
 	UpdatePlayers(ctx context.Context) error
 
+	RunPeriodicPlayerUpdates(frequency time.Duration, shutdown chan bool, wg *sync.WaitGroup)
+
 	// Add a new rankings for players. This will parse the data from the reader (in CSV format) and
 	// create a new rankings data point. Returns the id of the new rankings and an error if there
 	// was one.
-	AddRankings(r io.Reader, date time.Time) (string, error)
-
-	RunPeriodicPlayerUpdates(frequency time.Duration, shutdown chan bool, wg *sync.WaitGroup)
+	AddRanking(ctx context.Context, r io.Reader, date time.Time) (int32, error)
+	GetRanking(ctx context.Context, id int32) (*model.Ranking, error)
+	DeleteRanking(ctx context.Context, id int32) error
+	ListRankings(ctx context.Context) ([]model.Ranking, error)
 }
 
 type controller struct {

@@ -21,6 +21,8 @@ func ParsePosition(pos string) Position {
 		return POS_QB
 	case "rb":
 		return POS_RB
+	case "fb":
+		return POS_RB
 	case "wr":
 		return POS_WR
 	case "te":

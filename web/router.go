@@ -34,7 +34,7 @@ func getRouter(ctrl controller.C, render *render.Render) *chi.Mux {
 		r.Route("/rankings", func(r chi.Router) {
 			r.Get("/", rankingsRootHandler(ctrl, render))
 			r.Post("/", rankingsUploadHandler(ctrl, render))
-			r.Get("/{rankingID}", rankingsHandler(ctrl, render))
+			r.Get("/{rankingID:\\d+}", rankingsHandler(ctrl, render))
 		})
 	})
 

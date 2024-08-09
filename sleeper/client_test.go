@@ -19,22 +19,6 @@ func TestLoadPlayers_success(t *testing.T) {
 	}))
 	defer fakeSleeper.Close()
 
-	c := &client{
-		url:        fakeSleeper.URL,
-		httpClient: http.DefaultClient,
-	}
-
-	players, err := c.LoadPlayers()
-	if err != nil {
-		t.Fatalf("error should not have been nil")
-	}
-	if players == nil {
-		t.Fatalf("players shoud have been nil")
-	}
-	if len(players) != 4 {
-		t.Fatalf("wrong number of players, expected 4, got %d", len(players))
-	}
-
 	expected := map[string]model.Player{
 		"2374": {
 			FirstName: "Tyler",
@@ -64,6 +48,29 @@ func TestLoadPlayers_success(t *testing.T) {
 			Position:  model.POS_TE,
 			Team:      model.TEAM_WAS,
 		},
+		"1379": {
+			FirstName: "Kyle",
+			LastName:  "Juszczyk",
+			YahooID:   "26753",
+			Position:  model.POS_RB,
+			Team:      model.TEAM_SFO,
+		},
+	}
+
+	c := &client{
+		url:        fakeSleeper.URL,
+		httpClient: http.DefaultClient,
+	}
+
+	players, err := c.LoadPlayers()
+	if err != nil {
+		t.Fatalf("error should not have been nil")
+	}
+	if players == nil {
+		t.Fatalf("players shoud have been nil")
+	}
+	if len(players) != len(expected) {
+		t.Fatalf("wrong number of players, expected 4, got %d", len(players))
 	}
 
 	for _, p := range players {

@@ -32,6 +32,22 @@ CREATE TABLE IF NOT EXISTS player_changes (
     new     text NOT NULL
 );
 
+-- metadata about a ranking and a way to link all of the individual player
+-- rankings together.
+CREATE TABLE IF NOT EXISTS rankings (
+    id           serial PRIMARY KEY,
+    ranking_date timestamp with time zone NOT NULL,
+    created      timestamp with time zone DEFAULT (now() at time zone 'utc')
+);
+
+-- The individual player rankings at a point in time.
+CREATE TABLE IF NOT EXISTS player_rankings (
+    ranking_id serial references rankings(id),
+    player_id  varchar(16) references players(id),
+    ranking    integer NOT NULL,
+    PRIMARY KEY (ranking_id, player_id)
+);
+
 CREATE INDEX IF NOT EXISTS player_name_idx ON players USING gin(fts_player);
 CREATE INDEX IF NOT EXISTS player_yahoo_id_idx ON players(yahoo_id);
 CREATE INDEX IF NOT EXISTS player_change_idx ON player_changes(player, created DESC);
