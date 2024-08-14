@@ -49,6 +49,12 @@ jobs:
       - name: Go Test
         run: go test -v -count=1 -race -shuffle=on -coverprofile=./cover.out -covermode=atomic -coverpkg=./... ./...
       
+      - name: Static Analysis
+        uses: dominikh/staticcheck-action@v1
+        with:
+          version: "latest"
+          install-go: false
+
       - name: Check test coverage
         uses: vladopajic/go-test-coverage@v2
         with:

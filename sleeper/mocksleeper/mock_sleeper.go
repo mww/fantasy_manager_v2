@@ -19,3 +19,19 @@ func (c *Client) LoadPlayers() ([]model.Player, error) {
 
 	return res, args.Error(1)
 }
+
+func (c *Client) GetUserID(username string) (string, error) {
+	args := c.Called(username)
+	return args.String(0), args.Error(1)
+}
+
+func (c *Client) GetLeaguesForUser(userID, year string) ([]model.League, error) {
+	args := c.Called(userID, year)
+
+	var res []model.League
+	if args.Get(0) != nil {
+		res = args.Get(0).([]model.League)
+	}
+
+	return res, args.Error(1)
+}

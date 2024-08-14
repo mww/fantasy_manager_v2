@@ -1,0 +1,18 @@
+<div class="addLeague">
+  <form id="search" method="get" action="/leagues/platformLeagues">
+    <input type="hidden" id="platform" name="platform" value="sleeper" />
+    <div>
+      <div><label for="username">Sleeper username:</label></div>
+      <div><input type="text" id="username" name="username" /></div>
+    </div>
+    <div><input type="submit" value="Next" /></div>
+  </form>
+</div>
+
+{{ if . }}
+<div id="leagues">
+  {{ range $l := . }}
+    <div><a href="/leagues/{{ $l.ID }}">{{ $l.Name }} ({{ $l.Year }})</a></div>
+  {{ end }}
+</div>
+{{ end }}

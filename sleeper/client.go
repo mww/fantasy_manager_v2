@@ -2,6 +2,7 @@ package sleeper
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -13,6 +14,12 @@ const SleeperURL = "https://api.sleeper.app"
 
 type Client interface {
 	LoadPlayers() ([]model.Player, error)
+
+	// Take the username and return the sleeper user id or an error.
+	GetUserID(username string) (string, error)
+
+	// Get all of the leagues for the user and year.
+	GetLeaguesForUser(userID, year string) ([]model.League, error)
 }
 
 type client struct {
@@ -31,24 +38,9 @@ func New() (Client, error) {
 }
 
 func (c *client) LoadPlayers() ([]model.Player, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/v1/players/nfl", c.url), nil)
-	if err != nil {
-		return nil, fmt.Errorf("error creating http request: %w", err)
-	}
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error sending http request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
 	var parsed map[string]sleeperPlayer
-	err = json.NewDecoder(resp.Body).Decode(&parsed)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing response from sleeper: %w", err)
+	if err := c.sleeperRequest(&parsed, "/v1/players/nfl"); err != nil {
+		return nil, err
 	}
 
 	// Convert the players into model.Players
@@ -62,4 +54,70 @@ func (c *client) LoadPlayers() ([]model.Player, error) {
 	}
 
 	return result, nil
+}
+
+func (c *client) GetUserID(username string) (string, error) {
+	var resp struct {
+		UserID string `json:"user_id"`
+	}
+	if err := c.sleeperRequest(&resp, "/v1/user/%s", username); err != nil {
+		return "", err
+	}
+
+	if resp.UserID == "" {
+		return "", errors.New("no user found")
+	}
+
+	return resp.UserID, nil
+}
+
+func (c *client) GetLeaguesForUser(userID, year string) ([]model.League, error) {
+	var resp []struct {
+		LeagueID string `json:"league_id"`
+		Name     string `json:"name"`
+	}
+	if err := c.sleeperRequest(&resp, "/v1/user/%s/leagues/nfl/%s", userID, year); err != nil {
+		return nil, err
+	}
+
+	if len(resp) == 0 {
+		return nil, errors.New("no leagues found")
+	}
+
+	res := make([]model.League, len(resp))
+	for i, r := range resp {
+		res[i].ExternalID = r.LeagueID
+		res[i].Name = r.Name
+		res[i].Year = year
+		res[i].Archived = false
+		res[i].Platform = model.PlatformSleeper
+	}
+
+	return res, nil
+}
+
+// Sends the request to sleeper and uses a JSON parser to read the result into res.
+// Returns an error if any or if the status code of the result is not 200.
+func (c *client) sleeperRequest(res any, path string, args ...any) error {
+	p := fmt.Sprintf(path, args...)
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", c.url, p), nil)
+	if err != nil {
+		return fmt.Errorf("error creating sleeper http request: %w", err)
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("error sending sleeper http request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code from sleeper: %d", resp.StatusCode)
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(res)
+	if err != nil {
+		return fmt.Errorf("error parsing response from sleeper: %w", err)
+	}
+
+	return nil
 }

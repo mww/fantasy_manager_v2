@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/itbasis/go-clock"
 	"github.com/mww/fantasy_manager_v2/db"
 	"github.com/mww/fantasy_manager_v2/model"
 	"github.com/mww/fantasy_manager_v2/sleeper"
@@ -32,15 +33,22 @@ type C interface {
 	GetRanking(ctx context.Context, id int32) (*model.Ranking, error)
 	DeleteRanking(ctx context.Context, id int32) error
 	ListRankings(ctx context.Context) ([]model.Ranking, error)
+
+	GetLeaguesFromPlatform(ctx context.Context, username, platform, year string) ([]model.League, error)
+	AddLeague(ctx context.Context, platform, externalID, name, year string) (*model.League, error)
+	GetLeague(ctx context.Context, id int32) (*model.League, error)
+	ListLeagues(ctx context.Context) ([]model.League, error)
 }
 
 type controller struct {
+	clock   clock.Clock
 	sleeper sleeper.Client
 	db      db.DB
 }
 
-func New(sleeper sleeper.Client, db db.DB) (C, error) {
+func New(clock clock.Clock, sleeper sleeper.Client, db db.DB) (C, error) {
 	c := &controller{
+		clock:   clock,
 		sleeper: sleeper,
 		db:      db,
 	}

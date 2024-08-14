@@ -323,6 +323,78 @@ func (db *postgresDB) DeleteRanking(ctx context.Context, id int32) error {
 	return nil
 }
 
+func (db *postgresDB) ListLeagues(ctx context.Context) ([]model.League, error) {
+	const listLeaguesQuery = `SELECT id, platform, external_id, name, year, archived FROM leagues WHERE archived=false`
+
+	rows, err := db.pool.Query(ctx, listLeaguesQuery)
+	if err != nil {
+		return nil, fmt.Errorf("error listing leagues: %w", err)
+	}
+
+	leagues := make([]model.League, 0, 4)
+	for rows.Next() {
+		l := model.League{}
+
+		if err := rows.Scan(&l.ID, &l.Platform, &l.ExternalID, &l.Name, &l.Year, &l.Archived); err != nil {
+			return nil, fmt.Errorf("error reading league: %w", err)
+		}
+		leagues = append(leagues, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error reading results leagues query: %w", err)
+	}
+	return leagues, nil
+}
+
+func (db *postgresDB) GetLeague(ctx context.Context, id int32) (*model.League, error) {
+	const leagueQuery = `SELECT platform, external_id, name, year, archived FROM leagues WHERE id=@id`
+
+	l := model.League{ID: id}
+
+	args := pgx.NamedArgs{"id": id}
+	err := db.pool.QueryRow(ctx, leagueQuery, args).Scan(&l.Platform, &l.ExternalID, &l.Name, &l.Year, &l.Archived)
+	if err != nil {
+		return nil, fmt.Errorf("error querying league: %w", err)
+	}
+
+	return &l, nil
+}
+
+func (db *postgresDB) AddLeague(ctx context.Context, league *model.League) error {
+	const insertLeagueQuery = `INSERT INTO leagues(platform, external_id, name, year) 
+		VALUES (@platform, @externalID, @name, @year) RETURNING id`
+
+	args := pgx.NamedArgs{
+		"platform":   league.Platform,
+		"externalID": league.ExternalID,
+		"name":       league.Name,
+		"year":       league.Year,
+	}
+
+	err := db.pool.QueryRow(ctx, insertLeagueQuery, args).Scan(&league.ID)
+	if err != nil {
+		return fmt.Errorf("error inserting league: %w", err)
+	}
+	if league.ID <= 0 {
+		return fmt.Errorf("did not get a valid league id, got: %d", league.ID)
+	}
+
+	return nil
+}
+
+func (db *postgresDB) ArchiveLeague(ctx context.Context, id int32) error {
+	const archiveLeagueStmt = `UPDATE leagues SET archived=true WHERE id=@id`
+	tag, err := db.pool.Exec(ctx, archiveLeagueStmt, pgx.NamedArgs{"id": id})
+	if err != nil {
+		return fmt.Errorf("error archiving league: %w", err)
+	}
+	if tag.RowsAffected() != 1 {
+		return fmt.Errorf("expected 1 row to be affected, instead it was %d", tag.RowsAffected())
+	}
+
+	return nil
+}
+
 func (db *postgresDB) getPlayer(ctx context.Context, id string) (*model.Player, error) {
 	const query = `SELECT id, yahoo_id, name_first, name_last, nickname1,
 				  		position, team, weight_lb, height_in, birth_date,

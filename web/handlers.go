@@ -1,8 +1,10 @@
 package web
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -164,5 +166,86 @@ func forceUpdatePlayers(ctrl controller.C, render *render.Render) http.HandlerFu
 		}
 
 		render.Text(w, http.StatusOK, "update players completed successfully")
+	}
+}
+
+func leaguesHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		leagues, err := ctrl.ListLeagues(r.Context())
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err.Error())
+		}
+
+		render.HTML(w, http.StatusOK, "leagues", leagues)
+	}
+}
+
+func getLeagueHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		leagueID := chi.URLParam(r, "leagueID")
+		id, err := strconv.Atoi(leagueID)
+		if err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", fmt.Sprintf("error parsing league id: %v", err))
+			return
+		}
+
+		l, err := ctrl.GetLeague(r.Context(), int32(id))
+		if err != nil {
+			render.HTML(w, http.StatusNotFound, "404", err.Error())
+			return
+		}
+
+		render.HTML(w, http.StatusOK, "league", l)
+	}
+}
+
+func platformLeaguesHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		platform := r.URL.Query().Get("platform")
+		username := r.URL.Query().Get("username")
+		year := "2024"
+
+		leagues, err := ctrl.GetLeaguesFromPlatform(r.Context(), username, platform, year)
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err)
+			return
+		}
+
+		data := map[string]any{
+			"platform": platform,
+			"leagues":  leagues,
+			"year":     year,
+		}
+		render.HTML(w, http.StatusOK, "leaguesPlatformLeagues", data)
+	}
+}
+
+func leaguesPostHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", err.Error())
+			return
+		}
+
+		platform := r.FormValue("platform")
+		leagueData := r.FormValue("league")
+		year := r.FormValue("year")
+		var parsed struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		}
+		if err := json.Unmarshal([]byte(leagueData), &parsed); err != nil {
+			msg := fmt.Sprintf("error parsing league data: %v", err)
+			log.Print(msg)
+			render.HTML(w, http.StatusBadRequest, "400", msg)
+		}
+
+		l, err := ctrl.AddLeague(r.Context(), platform, parsed.ID, parsed.Name, year)
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err.Error())
+			return
+		}
+
+		http.Redirect(w, r, fmt.Sprintf("/leagues/%d", l.ID), http.StatusSeeOther)
 	}
 }

@@ -162,7 +162,7 @@ func TestUpdatePlayerNickname(t *testing.T) {
 		},
 	}
 
-	ctrl, err := New(sleeper, testDB.DB)
+	ctrl, err := New(testDB.Clock, sleeper, testDB.DB)
 	if err != nil {
 		t.Fatalf("error constructing controller: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestUpdatePlayerNickname(t *testing.T) {
 
 func TestUpdatePlayers_success(t *testing.T) {
 	sleeper := &mocksleeper.Client{}
-	ctrl, err := New(sleeper, testDB.DB)
+	ctrl, err := New(testDB.Clock, sleeper, testDB.DB)
 	if err != nil {
 		t.Fatalf("error creating controller: %v", err)
 	}
@@ -212,7 +212,7 @@ func TestUpdatePlayers_success(t *testing.T) {
 
 func TestUpdatePlayers_sleeperError(t *testing.T) {
 	sleeper := &mocksleeper.Client{}
-	ctrl, err := New(sleeper, testDB.DB)
+	ctrl, err := New(testDB.Clock, sleeper, testDB.DB)
 	if err != nil {
 		t.Fatalf("error creating controller: %v", err)
 	}
@@ -229,7 +229,7 @@ func TestUpdatePlayers_sleeperError(t *testing.T) {
 
 func TestRunPeriodicPlayerUpdates(t *testing.T) {
 	sleeper := &mocksleeper.Client{}
-	ctrl, err := New(sleeper, testDB.DB)
+	ctrl, err := New(testDB.Clock, sleeper, testDB.DB)
 	if err != nil {
 		t.Fatalf("error creating controller: %v", err)
 	}

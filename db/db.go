@@ -20,4 +20,9 @@ type DB interface {
 	GetRanking(ctx context.Context, id int32) (*model.Ranking, error)
 	AddRanking(ctx context.Context, date time.Time, rankings map[string]int32) (*model.Ranking, error)
 	DeleteRanking(ctx context.Context, id int32) error
+
+	ListLeagues(ctx context.Context) ([]model.League, error)
+	GetLeague(ctx context.Context, id int32) (*model.League, error)
+	AddLeague(ctx context.Context, league *model.League) error
+	ArchiveLeague(ctx context.Context, id int32) error
 }

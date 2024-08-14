@@ -79,3 +79,43 @@ func (c *C) ListRankings(ctx context.Context) ([]model.Ranking, error) {
 	}
 	return res, args.Error(1)
 }
+
+func (c *C) GetLeaguesFromPlatform(ctx context.Context, username, platform, year string) ([]model.League, error) {
+	args := c.Called(ctx, username, platform, year)
+
+	var res []model.League
+	if args.Get(0) != nil {
+		res = args.Get(0).([]model.League)
+	}
+	return res, args.Error(1)
+}
+
+func (c *C) AddLeague(ctx context.Context, platform, externalID, name, year string) (*model.League, error) {
+	args := c.Called(ctx, platform, externalID, name, year)
+
+	var res *model.League
+	if args.Get(0) != nil {
+		res = args.Get(0).(*model.League)
+	}
+	return res, args.Error(1)
+}
+
+func (c *C) GetLeague(ctx context.Context, id int32) (*model.League, error) {
+	args := c.Called(ctx, id)
+
+	var res *model.League
+	if args.Get(0) != nil {
+		res = args.Get(0).(*model.League)
+	}
+	return res, args.Error(1)
+}
+
+func (c *C) ListLeagues(ctx context.Context) ([]model.League, error) {
+	args := c.Called(ctx)
+
+	var res []model.League
+	if args.Get(0) != nil {
+		res = args.Get(0).([]model.League)
+	}
+	return res, args.Error(1)
+}

@@ -45,7 +45,7 @@ func main() {
 		log.Fatalf("error creating sleeper client: %v", err)
 	}
 
-	ctrl, err := controller.New(client, db)
+	ctrl, err := controller.New(clock, client, db)
 	if err != nil {
 		log.Fatalf("error creating a new controller: %v", err)
 	}

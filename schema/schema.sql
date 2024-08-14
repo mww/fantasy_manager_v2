@@ -48,6 +48,16 @@ CREATE TABLE IF NOT EXISTS player_rankings (
     PRIMARY KEY (ranking_id, player_id)
 );
 
+CREATE TABLE IF NOT EXISTS leagues (
+    id          serial PRIMARY KEY,
+    platform    varchar(16) NOT NULL, -- Where the league is hosted, sleeper, yahoo, etc.
+    external_id varchar(64) NOT NULL, -- The id assigned by the platform. It is opaque to fantasy manager.
+    name        varchar(64) NOT NULL,
+    year        varchar(4) NOT NULL, -- The year of the league - YYYY. This is for systems where a new league id is generated each season.
+    archived    boolean DEFAULT false,
+    created     timestamp with time zone DEFAULT (now() at time zone 'utc')
+);
+
 CREATE INDEX IF NOT EXISTS player_name_idx ON players USING gin(fts_player);
 CREATE INDEX IF NOT EXISTS player_yahoo_id_idx ON players(yahoo_id);
 CREATE INDEX IF NOT EXISTS player_change_idx ON player_changes(player, created DESC);

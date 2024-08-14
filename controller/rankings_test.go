@@ -66,7 +66,7 @@ func TestRankings(t *testing.T) {
 	ctx := context.Background()
 
 	mockSleeper := mocksleeper.Client{}
-	ctrl, err := New(&mockSleeper, testDB.DB)
+	ctrl, err := New(testDB.Clock, &mockSleeper, testDB.DB)
 	if err != nil {
 		t.Fatalf("error constructing controller: %v", err)
 	}
