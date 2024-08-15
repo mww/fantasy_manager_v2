@@ -38,6 +38,13 @@ func getRouter(ctrl controller.C, render *render.Render) *chi.Mux {
 		})
 	})
 
+	r.Route("/leagues", func(r chi.Router) {
+		r.Get("/", leaguesHandler(ctrl, render))
+		r.Get("/{leagueID:\\d+}", getLeagueHandler(ctrl, render))
+		r.Get("/platformLeagues", platformLeaguesHandler(ctrl, render))
+		r.Post("/", leaguesPostHandler(ctrl, render))
+	})
+
 	r.Route("/admin", func(r chi.Router) {
 		r.Use(middleware.BasicAuth("ff", map[string]string{"admin": "pa55word"})) // TODO: read from DB instead
 		r.Use(middleware.Timeout(30 * time.Second))                               // Set a longer timeout for /admin actions

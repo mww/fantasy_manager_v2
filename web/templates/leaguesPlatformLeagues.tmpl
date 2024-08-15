@@ -1,0 +1,11 @@
+<div class="addLeague">
+  <form id="search" method="post" action="/leagues">
+    <input type="hidden" id="platform" name="platform" value="{{ .platform }}" />
+    <input type="hidden" id="year" name="year" value="{{ .year }}" />
+    {{ range $l := .leagues }}
+        <input type="radio" id="{{ $l.ExternalID }}" name="league" value='{"id":"{{ $l.ExternalID }}", "name":"{{ $l.Name }}"}'>
+        <label for="{{ $l.ExternalID }}">{{ $l.Name }}</label><br>
+    {{ end }}
+    <input type="submit" value="Add League" />
+  </form>
+</div>

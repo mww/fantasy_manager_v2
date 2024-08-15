@@ -408,6 +408,70 @@ func TestAddRanking_negativeCases(t *testing.T) {
 	}
 }
 
+func TestLeagues(t *testing.T) {
+	ctx := context.Background()
+
+	l1 := model.League{
+		Platform:   model.PlatformSleeper,
+		ExternalID: "1",
+		Name:       "League 1",
+		Year:       "2024",
+	}
+
+	l2 := model.League{
+		Platform:   model.PlatformSleeper,
+		ExternalID: "2",
+		Name:       "League 2",
+		Year:       "2024",
+	}
+
+	err := testDB.AddLeague(ctx, &l1)
+	if err != nil {
+		t.Fatalf("unexpected error adding league: %v", err)
+	}
+
+	err = testDB.AddLeague(ctx, &l2)
+	if err != nil {
+		t.Fatalf("unexpected error adding league: %v", err)
+	}
+
+	leagues, err := testDB.ListLeagues(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error listing leagues: %v", err)
+	}
+	if len(leagues) != 2 {
+		t.Fatalf("expected to list 2 leagues, but got %d", len(leagues))
+	}
+	if leagues[0].ExternalID != "1" {
+		t.Errorf("unexpected external id, wanted 1 got: %s", leagues[0].ExternalID)
+	}
+	if leagues[1].ExternalID != "2" {
+		t.Errorf("unexpected external id, wanted 1 got: %s", leagues[1].ExternalID)
+	}
+
+	r1, err := testDB.GetLeague(ctx, l1.ID)
+	if err != nil {
+		t.Fatalf("error getting league by id: %v", err)
+	}
+	if !reflect.DeepEqual(&l1, r1) {
+		t.Errorf("league values not as expected - wanted: %v, got: %v", &l1, r1)
+	}
+
+	e1 := testDB.ArchiveLeague(ctx, l1.ID)
+	e2 := testDB.ArchiveLeague(ctx, l2.ID)
+	if err := errors.Join(e1, e2); err != nil {
+		t.Errorf("expected no errors but was: %v", err)
+	}
+
+	leagues, err = testDB.ListLeagues(ctx)
+	if err != nil {
+		t.Errorf("error getting leagues: %v", err)
+	}
+	if len(leagues) != 0 {
+		t.Errorf("expected 0 leagues, instead got: %d", len(leagues))
+	}
+}
+
 func getPlayer() *model.Player {
 	id := atomic.AddInt32(&idCtr, 1)
 

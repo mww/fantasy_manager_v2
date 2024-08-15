@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/mww/fantasy_manager_v2/model"
-	"github.com/mww/fantasy_manager_v2/sleeper/mocksleeper"
+	"github.com/mww/fantasy_manager_v2/sleeper"
 	"github.com/mww/fantasy_manager_v2/testutils"
 )
 
@@ -37,8 +37,11 @@ func TestGetPlayerRankingMap(t *testing.T) {
 
 	ctx := context.Background()
 
-	sleeper := &mocksleeper.Client{}
-	ctrl := &controller{sleeper: sleeper, db: testDB.DB}
+	fakeSleeper := testutils.NewFakeSleeperServer()
+	defer fakeSleeper.Close()
+
+	sleeperClient := sleeper.NewForTest(fakeSleeper.URL())
+	ctrl := &controller{sleeper: sleeperClient, db: testDB.DB}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -65,8 +68,11 @@ func TestGetPlayerRankingMap(t *testing.T) {
 func TestRankings(t *testing.T) {
 	ctx := context.Background()
 
-	mockSleeper := mocksleeper.Client{}
-	ctrl, err := New(&mockSleeper, testDB.DB)
+	fakeSleeper := testutils.NewFakeSleeperServer()
+	defer fakeSleeper.Close()
+
+	sleeperClient := sleeper.NewForTest(fakeSleeper.URL())
+	ctrl, err := New(testDB.Clock, sleeperClient, testDB.DB)
 	if err != nil {
 		t.Fatalf("error constructing controller: %v", err)
 	}
