@@ -10,7 +10,6 @@ import (
 	"github.com/mww/fantasy_manager_v2/db"
 	"github.com/mww/fantasy_manager_v2/model"
 	"github.com/mww/fantasy_manager_v2/sleeper"
-	"github.com/mww/fantasy_manager_v2/sleeper/mocksleeper"
 	"github.com/mww/fantasy_manager_v2/testutils"
 )
 
@@ -189,57 +188,36 @@ func TestUpdatePlayerNickname(t *testing.T) {
 }
 
 func TestUpdatePlayers_success(t *testing.T) {
-	sleeper := &mocksleeper.Client{}
-	ctrl, err := New(testDB.Clock, sleeper, testDB.DB)
+	fakeSleeper := testutils.NewFakeSleeperServer()
+	defer fakeSleeper.Close()
+
+	sleeperClient := sleeper.NewForTest(fakeSleeper.URL())
+	ctrl, err := New(testDB.Clock, sleeperClient, testDB.DB)
 	if err != nil {
 		t.Fatalf("error creating controller: %v", err)
 	}
-
-	players, err := testutils.GetPlayersForTest()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sleeper.On("LoadPlayers").Return(players, nil)
 
 	err = ctrl.UpdatePlayers(context.Background())
 	if err != nil {
 		t.Errorf("error updating players: %v", err)
 	}
 
-	sleeper.AssertExpectations(t)
-}
-
-func TestUpdatePlayers_sleeperError(t *testing.T) {
-	sleeper := &mocksleeper.Client{}
-	ctrl, err := New(testDB.Clock, sleeper, testDB.DB)
-	if err != nil {
-		t.Fatalf("error creating controller: %v", err)
-	}
-
-	sleeper.On("LoadPlayers").Return(nil, errors.New("error from sleeper"))
-
-	err = ctrl.UpdatePlayers(context.Background())
-	if !errorsEqual(err, errors.New("error from sleeper")) {
-		t.Errorf("not the expected error: '%v'", err)
-	}
-
-	sleeper.AssertExpectations(t)
+	validatePlayer(t, testDB.DB, "2374", "Tyler", model.POS_WR, model.TEAM_SEA)
+	validatePlayer(t, testDB.DB, "6904", "Jalen", model.POS_QB, model.TEAM_PHI)
+	validatePlayer(t, testDB.DB, "9509", "Bijan", model.POS_RB, model.TEAM_ATL)
+	validatePlayer(t, testDB.DB, "11596", "Ben", model.POS_TE, model.TEAM_WAS)
+	validatePlayer(t, testDB.DB, "1379", "Kyle", model.POS_RB, model.TEAM_SFO)
 }
 
 func TestRunPeriodicPlayerUpdates(t *testing.T) {
-	sleeper := &mocksleeper.Client{}
-	ctrl, err := New(testDB.Clock, sleeper, testDB.DB)
+	fakeSleeper := testutils.NewFakeSleeperServer()
+	defer fakeSleeper.Close()
+
+	sleeperClient := sleeper.NewForTest(fakeSleeper.URL())
+	ctrl, err := New(testDB.Clock, sleeperClient, testDB.DB)
 	if err != nil {
 		t.Fatalf("error creating controller: %v", err)
 	}
-
-	players, err := testutils.GetPlayersForTest()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sleeper.On("LoadPlayers").Return(players, nil).Times(3)
 
 	shutdown := make(chan bool, 1)
 	go func() {
@@ -252,7 +230,11 @@ func TestRunPeriodicPlayerUpdates(t *testing.T) {
 	ctrl.RunPeriodicPlayerUpdates(50*time.Millisecond, shutdown, &wg)
 	wg.Wait()
 
-	sleeper.AssertExpectations(t)
+	validatePlayer(t, testDB.DB, "2374", "Tyler", model.POS_WR, model.TEAM_SEA)
+	validatePlayer(t, testDB.DB, "6904", "Jalen", model.POS_QB, model.TEAM_PHI)
+	validatePlayer(t, testDB.DB, "9509", "Bijan", model.POS_RB, model.TEAM_ATL)
+	validatePlayer(t, testDB.DB, "11596", "Ben", model.POS_TE, model.TEAM_WAS)
+	validatePlayer(t, testDB.DB, "1379", "Kyle", model.POS_RB, model.TEAM_SFO)
 }
 
 func errorsEqual(e1, e2 error) bool {
@@ -263,4 +245,22 @@ func errorsEqual(e1, e2 error) bool {
 		return false
 	}
 	return e1.Error() == e2.Error()
+}
+
+func validatePlayer(t *testing.T, db db.DB, id, exFirstName string, exPos model.Position, exTeam *model.NFLTeam) {
+	ctx := context.Background()
+	p, err := db.GetPlayer(ctx, id)
+	if err != nil {
+		t.Fatalf("error when looking up player: %v", err)
+	}
+
+	if p.FirstName != exFirstName {
+		t.Errorf("unexpected first name, expected: %s, got: %s", exFirstName, p.FirstName)
+	}
+	if p.Position != exPos {
+		t.Errorf("unexpected position, expected: %v, got: %v", exPos, p.Position)
+	}
+	if p.Team != exTeam {
+		t.Errorf("unexpected team, expected: %s, got: %s", exTeam.Friendly(), p.Team.Friendly())
+	}
 }

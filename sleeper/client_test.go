@@ -9,23 +9,17 @@ import (
 	"testing"
 
 	"github.com/mww/fantasy_manager_v2/model"
+	"github.com/mww/fantasy_manager_v2/testutils"
 )
 
-//go:embed testdata/players.json
-var playerJSON []byte
-
-//go:embed testdata/user.json
-var userJSON []byte
-
-//go:embed testdata/user_leagues.json
-var userLeaguesJSON []byte
-
 func TestLoadPlayers_success(t *testing.T) {
-	fakeSleeper := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		rw.WriteHeader(http.StatusOK)
-		rw.Write(playerJSON)
-	}))
+	fakeSleeper := testutils.NewFakeSleeperServer()
 	defer fakeSleeper.Close()
+
+	c := &client{
+		url:        fakeSleeper.URL(),
+		httpClient: http.DefaultClient,
+	}
 
 	expected := map[string]model.Player{
 		"2374": {
@@ -63,11 +57,6 @@ func TestLoadPlayers_success(t *testing.T) {
 			Position:  model.POS_RB,
 			Team:      model.TEAM_SFO,
 		},
-	}
-
-	c := &client{
-		url:        fakeSleeper.URL,
-		httpClient: http.DefaultClient,
 	}
 
 	players, err := c.LoadPlayers()
@@ -126,20 +115,11 @@ func TestLoadPlayers_httpError(t *testing.T) {
 }
 
 func TestGetUserID(t *testing.T) {
-	fakeSleeper := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		if req.URL.Path == "/v1/user/sleeperuser" {
-			rw.WriteHeader(http.StatusOK)
-			rw.Write(userJSON)
-		} else {
-			// requesting a user that doesn't exist seems to return a 200 with "null" as the response body as of 2024-08-12
-			rw.WriteHeader(http.StatusOK)
-			rw.Write([]byte("null"))
-		}
-	}))
+	fakeSleeper := testutils.NewFakeSleeperServer()
 	defer fakeSleeper.Close()
 
 	c := &client{
-		url:        fakeSleeper.URL,
+		url:        fakeSleeper.URL(),
 		httpClient: http.DefaultClient,
 	}
 
@@ -172,19 +152,11 @@ func TestGetUserID(t *testing.T) {
 }
 
 func TestGetLeaguesForUser(t *testing.T) {
-	fakeSleeper := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		if req.URL.Path == "/v1/user/12345678/leagues/nfl/2024" {
-			rw.WriteHeader(http.StatusOK)
-			rw.Write(userLeaguesJSON)
-		} else {
-			rw.WriteHeader(http.StatusOK)
-			rw.Write([]byte("[]"))
-		}
-	}))
+	fakeSleeper := testutils.NewFakeSleeperServer()
 	defer fakeSleeper.Close()
 
 	c := &client{
-		url:        fakeSleeper.URL,
+		url:        fakeSleeper.URL(),
 		httpClient: http.DefaultClient,
 	}
 

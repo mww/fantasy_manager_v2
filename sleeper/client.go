@@ -37,6 +37,13 @@ func New() (Client, error) {
 	return c, nil
 }
 
+func NewForTest(url string) Client {
+	return &client{
+		url:        url,
+		httpClient: http.DefaultClient,
+	}
+}
+
 func (c *client) LoadPlayers() ([]model.Player, error) {
 	var parsed map[string]sleeperPlayer
 	if err := c.sleeperRequest(&parsed, "/v1/players/nfl"); err != nil {
