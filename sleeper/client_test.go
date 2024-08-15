@@ -129,7 +129,7 @@ func TestGetUserID(t *testing.T) {
 		err      error
 	}{
 		{username: "sleeperuser", expected: "12345678"},
-		{username: "badusername", expected: "", err: errors.New("no user found")},
+		{username: "badusername", expected: "", err: errors.New("user not found")},
 	}
 
 	for _, tc := range tests {

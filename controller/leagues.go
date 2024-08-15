@@ -41,12 +41,12 @@ func (c *controller) AddLeague(ctx context.Context, platform, externalID, name, 
 
 	externalID = strings.TrimSpace(externalID)
 	if externalID == "" {
-		return nil, fmt.Errorf("externalID must be provided, got: '%s'", externalID)
+		return nil, errors.New("externalID must be provided")
 	}
 
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return nil, fmt.Errorf("name must be provided, got: '%s'", name)
+		return nil, errors.New("league name must be provided")
 	}
 
 	if _, err := time.Parse(yearOnlyFormat, year); err != nil {

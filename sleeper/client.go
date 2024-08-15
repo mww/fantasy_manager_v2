@@ -72,7 +72,7 @@ func (c *client) GetUserID(username string) (string, error) {
 	}
 
 	if resp.UserID == "" {
-		return "", errors.New("no user found")
+		return "", errors.New("user not found")
 	}
 
 	return resp.UserID, nil
