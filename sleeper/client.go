@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
+	"strconv"
 	"time"
 
 	"github.com/mww/fantasy_manager_v2/model"
@@ -20,6 +22,12 @@ type Client interface {
 
 	// Get all of the leagues for the user and year.
 	GetLeaguesForUser(userID, year string) ([]model.League, error)
+
+	// Get all of the league managers for a specific league.
+	GetLeagueManagers(leagueID string) ([]model.LeagueManager, error)
+
+	// Sort the managers in a stable and logical order.
+	SortManagers(m []model.LeagueManager)
 }
 
 type client struct {
@@ -101,6 +109,71 @@ func (c *client) GetLeaguesForUser(userID, year string) ([]model.League, error) 
 	}
 
 	return res, nil
+}
+
+func (c *client) GetLeagueManagers(leagueID string) ([]model.LeagueManager, error) {
+	// TODO - call rosters first, then get the owners, that way we can more easily ignore co-owners
+	var rosters []struct {
+		OwnerID  string `json:"owner_id"`
+		RosterID int    `json:"roster_id"`
+	}
+	if err := c.sleeperRequest(&rosters, "/v1/league/%s/rosters", leagueID); err != nil {
+		return nil, err
+	}
+	if len(rosters) == 0 {
+		return nil, errors.New("no managers found")
+	}
+
+	managerMap := make(map[string]*model.LeagueManager)
+	for _, r := range rosters {
+		managerMap[r.OwnerID] = &model.LeagueManager{
+			ExternalID: r.OwnerID,
+			JoinKey:    fmt.Sprint(r.RosterID),
+		}
+	}
+
+	type metadata struct {
+		TeamName string `json:"team_name"`
+	}
+	var users []struct {
+		DisplayName string    `json:"display_name"`
+		UserID      string    `json:"user_id"`
+		Metadata    *metadata `json:"metadata"`
+	}
+	if err := c.sleeperRequest(&users, "/v1/league/%s/users", leagueID); err != nil {
+		return nil, err
+	}
+	if len(users) == 0 {
+		return nil, errors.New("no managers found")
+	}
+
+	for _, u := range users {
+		if m, found := managerMap[u.UserID]; found {
+			m.ManagerName = u.DisplayName
+			if u.Metadata != nil && u.Metadata.TeamName != "" {
+				m.TeamName = u.Metadata.TeamName
+			}
+		}
+	}
+
+	resp := make([]model.LeagueManager, 0, len(managerMap))
+	for _, v := range managerMap {
+		resp = append(resp, *v)
+	}
+	c.SortManagers(resp)
+	return resp, nil
+}
+
+func (c *client) SortManagers(m []model.LeagueManager) {
+	// Sort by the JoinKey value
+	slices.SortFunc(m, func(a, b model.LeagueManager) int {
+		ai, e1 := strconv.Atoi(a.JoinKey)
+		bi, e2 := strconv.Atoi(b.JoinKey)
+		if err := errors.Join(e1, e2); err != nil {
+			return 0
+		}
+		return ai - bi
+	})
 }
 
 // Sends the request to sleeper and uses a JSON parser to read the result into res.

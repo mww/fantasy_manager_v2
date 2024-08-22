@@ -1,0 +1,93 @@
+[
+  {
+    "avatar": "fea3359d31ed52934d9fade22e67487d",
+    "display_name": "gee17",
+    "is_bot": false,
+    "is_owner": false,
+    "league_id": "924039165950484480",
+    "metadata": {
+      "allow_pn": "on",
+      "mention_pn": "on"
+    },
+    "settings": null,
+    "user_id": "300368913101774848"
+  },
+  {
+    "avatar": "4cd377c306da19621012531d8c7b0066",
+    "display_name": "8thAndFinalRule",
+    "is_bot": false,
+    "is_owner": false,
+    "league_id": "924039165950484480",
+    "metadata": {
+      "allow_pn": "on",
+      "avatar": "https://sleepercdn.com/uploads/eecb941f0dad25a8aaa71d62b45eef4d",
+      "mention_pn": "on",
+      "team_name": "Puk Nukem"
+    },
+    "settings": null,
+    "user_id": "300638784440004608"
+  },
+  {
+    "avatar": "31fd2c352585ba38429171d4ad8f77b3",
+    "display_name": "Jollymon",
+    "is_bot": false,
+    "is_owner": false,
+    "league_id": "924039165950484480",
+    "metadata": {
+      "allow_pn": "on",
+      "avatar": "https://sleepercdn.com/uploads/7ea24148d72fc9268821574af87639e4",
+      "mention_pn": "on",
+      "team_name": "Jolly Roger"
+    },
+    "settings": null,
+    "user_id": "325106323354046464"
+  },
+  {
+    "avatar": "3ce71295a5556aea3d63145973b566e0",
+    "display_name": "mww",
+    "is_bot": false,
+    "is_owner": true,
+    "league_id": "924039165950484480",
+    "metadata": {
+      "allow_pn": "on",
+      "avatar": "https://sleepercdn.com/uploads/ea474ad473e7ba64dd08ccb4f82b91ed",
+      "mascot_item_type_id_leg_1": "furrari",
+      "mascot_item_type_id_leg_10": "furrari",
+      "mascot_item_type_id_leg_11": "furrari",
+      "mascot_item_type_id_leg_12": "furrari",
+      "mascot_item_type_id_leg_13": "furrari",
+      "mascot_item_type_id_leg_14": "furrari",
+      "mascot_item_type_id_leg_15": "furrari",
+      "mascot_item_type_id_leg_16": "furrari",
+      "mascot_item_type_id_leg_17": "furrari",
+      "mascot_item_type_id_leg_18": "furrari",
+      "mascot_item_type_id_leg_2": "furrari",
+      "mascot_item_type_id_leg_3": "furrari",
+      "mascot_item_type_id_leg_4": "furrari",
+      "mascot_item_type_id_leg_5": "furrari",
+      "mascot_item_type_id_leg_6": "furrari",
+      "mascot_item_type_id_leg_7": "furrari",
+      "mascot_item_type_id_leg_8": "furrari",
+      "mascot_item_type_id_leg_9": "furrari",
+      "mascot_message_emotion_leg_1": "idle",
+      "mention_pn": "on",
+      "team_name": "No-Bell Prizes"
+    },
+    "settings": null,
+    "user_id": "362744067425296384"
+  },
+  {
+    "avatar": "3a22165af8f467cc5554b1877efdc61c",
+    "display_name": "jollypg24",
+    "is_bot": false,
+    "is_owner": false,
+    "league_id": "924039165950484480",
+    "metadata": {
+      "allow_pn": "on",
+      "avatar": "https://sleepercdn.com/uploads/e3a3ec81bd66ce55ab24c82122efd304.jpg",
+      "mention_pn": "on"
+    },
+    "settings": null,
+    "user_id": "586214750375940096"
+  }
+]

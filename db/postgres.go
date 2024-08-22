@@ -360,6 +360,79 @@ func (db *postgresDB) GetLeague(ctx context.Context, id int32) (*model.League, e
 	return &l, nil
 }
 
+func (db *postgresDB) GetLeagueManagers(ctx context.Context, leagueID int32) ([]model.LeagueManager, error) {
+	const query = `SELECT external_id, team_name, manager_name, join_key FROM league_managers WHERE league_id=@id`
+
+	rows, err := db.pool.Query(ctx, query, pgx.NamedArgs{"id": leagueID})
+	if err != nil {
+		return nil, fmt.Errorf("error querying league managers: %w", err)
+	}
+
+	managers := make([]model.LeagueManager, 0, 12)
+	for rows.Next() {
+		m := model.LeagueManager{}
+
+		if err := rows.Scan(&m.ExternalID, &m.TeamName, &m.ManagerName, &m.JoinKey); err != nil {
+			return nil, fmt.Errorf("error reading league manager: %w", err)
+		}
+		managers = append(managers, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error reading results for leagues managers: %w", err)
+	}
+
+	return managers, nil
+}
+
+func (db *postgresDB) SaveLeagueManager(ctx context.Context, leagueID int32, manager *model.LeagueManager) error {
+	const query = `SELECT COUNT(*) FROM league_managers WHERE league_id=@leagueID AND external_id=@externalID`
+	const update = `UPDATE league_managers SET team_name=@teamName, manager_name=@managerName, join_key=@joinKey WHERE league_id=@leagueID AND external_id=@externalID`
+	const insert = `INSERT INTO league_managers(league_id, external_id, team_name, manager_name, join_key) 
+		VALUES (@leagueID, @externalID, @teamName, @managerName, @joinKey)`
+
+	tx, err := db.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Not all of these args are needed for the query, but they are for the update/insert
+	args := pgx.NamedArgs{
+		"leagueID":    leagueID,
+		"externalID":  manager.ExternalID,
+		"teamName":    manager.TeamName,
+		"managerName": manager.ManagerName,
+		"joinKey":     manager.JoinKey,
+	}
+
+	var count int
+	err = tx.QueryRow(ctx, query, args).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("unexpected error getting league manager at start of save: %w", err)
+	}
+
+	queryToUse := update
+	if count == 0 {
+		queryToUse = insert
+	} else if count > 1 {
+		return fmt.Errorf("found multiple rows when 1 expected, leagueID: %d, externalID: %s", leagueID, manager.ExternalID)
+	}
+
+	// execute the insert or update
+	tag, err := tx.Exec(ctx, queryToUse, args)
+	if err != nil {
+		return fmt.Errorf("error updating league manager: %w", err)
+	}
+	if tag.RowsAffected() != 1 {
+		return fmt.Errorf("expected 1 league manager updated, got: %d", tag.RowsAffected())
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("error commint leange manager transaction: %w", err)
+	}
+	return nil
+}
+
 func (db *postgresDB) AddLeague(ctx context.Context, league *model.League) error {
 	const insertLeagueQuery = `INSERT INTO leagues(platform, external_id, name, year) 
 		VALUES (@platform, @externalID, @name, @year) RETURNING id`

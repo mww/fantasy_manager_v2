@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS players (
 
 CREATE TABLE IF NOT EXISTS player_changes (
     id      bigserial PRIMARY KEY,
-    player  varchar(16) references players(id),
+    player  varchar(16) REFERENCES players(id),
     created timestamp DEFAULT (now() at time zone 'utc'),
     prop    varchar(32) NOT NULL,
     old     text NOT NULL,
@@ -42,8 +42,8 @@ CREATE TABLE IF NOT EXISTS rankings (
 
 -- The individual player rankings at a point in time.
 CREATE TABLE IF NOT EXISTS player_rankings (
-    ranking_id serial references rankings(id),
-    player_id  varchar(16) references players(id),
+    ranking_id serial REFERENCES rankings(id),
+    player_id  varchar(16) REFERENCES players(id),
     ranking    integer NOT NULL,
     PRIMARY KEY (ranking_id, player_id)
 );
@@ -56,6 +56,16 @@ CREATE TABLE IF NOT EXISTS leagues (
     year        varchar(4) NOT NULL, -- The year of the league - YYYY. This is for systems where a new league id is generated each season.
     archived    boolean DEFAULT false,
     created     timestamp with time zone DEFAULT (now() at time zone 'utc')
+);
+
+CREATE TABLE IF NOT EXISTS league_managers (
+    league_id    serial REFERENCES leagues(id),
+    external_id  varchar(64) NOT NULL,
+    team_name    varchar(64) NOT NULL,
+    manager_name varchar(64),
+    join_key     varchar(32), -- A value used help join different bits of data. e.g. sleeper uses "roster_id" in weekly scores.
+    created      timestamp with time zone DEFAULT (now() at time zone 'utc'),
+    PRIMARY KEY (league_id, external_id)
 );
 
 CREATE INDEX IF NOT EXISTS player_name_idx ON players USING gin(fts_player);

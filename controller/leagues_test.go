@@ -113,3 +113,36 @@ func TestAddLeague(t *testing.T) {
 		})
 	}
 }
+
+func TestAddLeagueManagers(t *testing.T) {
+	ctx := context.Background()
+
+	fakeSleeper := testutils.NewFakeSleeperServer()
+	defer testutils.NewFakeSleeperServer()
+	sleeper := sleeper.NewForTest(fakeSleeper.URL())
+
+	ctrl, err := New(clock.New(), sleeper, testDB.DB)
+	if err != nil {
+		t.Fatalf("error creating new controller: %v", err)
+	}
+
+	l, err := ctrl.AddLeague(ctx, model.PlatformSleeper, "924039165950484480", "Footclan & Friends Dynasty", "2024")
+	if err != nil {
+		t.Fatalf("error adding league: %v", err)
+	}
+
+	l, err = ctrl.AddLeagueManagers(ctx, l.ID)
+	if err != nil {
+		t.Fatalf("error adding league managers: %v", err)
+	}
+
+	expectedManagers := []model.LeagueManager{
+		{ExternalID: "300638784440004608", TeamName: "Puk Nukem", ManagerName: "8thAndFinalRule", JoinKey: "1"},
+		{ExternalID: "362744067425296384", TeamName: "No-Bell Prizes", ManagerName: "mww", JoinKey: "4"},
+		{ExternalID: "300368913101774848", ManagerName: "gee17", JoinKey: "6"},
+		{ExternalID: "325106323354046464", TeamName: "Jolly Roger", ManagerName: "Jollymon", JoinKey: "7"},
+	}
+	if !reflect.DeepEqual(expectedManagers, l.Managers) {
+		t.Errorf("l.Managers does not match expected value, got: %v", l.Managers)
+	}
+}

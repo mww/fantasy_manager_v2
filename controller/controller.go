@@ -36,6 +36,7 @@ type C interface {
 
 	GetLeaguesFromPlatform(ctx context.Context, username, platform, year string) ([]model.League, error)
 	AddLeague(ctx context.Context, platform, externalID, name, year string) (*model.League, error)
+	AddLeagueManagers(ctx context.Context, leagueID int32) (*model.League, error) // Will also update the list
 	GetLeague(ctx context.Context, id int32) (*model.League, error)
 	ListLeagues(ctx context.Context) ([]model.League, error)
 }

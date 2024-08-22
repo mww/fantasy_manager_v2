@@ -9,6 +9,14 @@ type League struct {
 	Name       string
 	Year       string
 	Archived   bool
+	Managers   []LeagueManager
+}
+
+type LeagueManager struct {
+	ExternalID  string
+	TeamName    string
+	ManagerName string
+	JoinKey     string
 }
 
 func IsPlatformSupported(platform string) bool {

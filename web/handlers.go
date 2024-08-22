@@ -199,6 +199,25 @@ func getLeagueHandler(ctrl controller.C, render *render.Render) http.HandlerFunc
 	}
 }
 
+func refreshLeagueManagersHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		leagueID := chi.URLParam(r, "leagueID")
+		id, err := strconv.Atoi(leagueID)
+		if err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", fmt.Sprintf("error parsing league id: %v", err))
+			return
+		}
+
+		_, err = ctrl.AddLeagueManagers(r.Context(), int32(id))
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err.Error())
+			return
+		}
+
+		http.Redirect(w, r, fmt.Sprintf("/leagues/%d", id), http.StatusSeeOther)
+	}
+}
+
 func platformLeaguesHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		platform := r.URL.Query().Get("platform")
