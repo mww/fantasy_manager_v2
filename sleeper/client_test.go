@@ -16,10 +16,7 @@ func TestLoadPlayers_success(t *testing.T) {
 	fakeSleeper := testutils.NewFakeSleeperServer()
 	defer fakeSleeper.Close()
 
-	c := &client{
-		url:        fakeSleeper.URL(),
-		httpClient: http.DefaultClient,
-	}
+	c := NewForTest(fakeSleeper.URL())
 
 	expected := map[string]model.Player{
 		"2374": {
@@ -100,10 +97,7 @@ func TestLoadPlayers_httpError(t *testing.T) {
 	}))
 	defer fakeSleeper.Close()
 
-	c := &client{
-		url:        fakeSleeper.URL,
-		httpClient: http.DefaultClient,
-	}
+	c := NewForTest(fakeSleeper.URL)
 
 	players, err := c.LoadPlayers()
 	if err == nil {
@@ -118,10 +112,7 @@ func TestGetUserID(t *testing.T) {
 	fakeSleeper := testutils.NewFakeSleeperServer()
 	defer fakeSleeper.Close()
 
-	c := &client{
-		url:        fakeSleeper.URL(),
-		httpClient: http.DefaultClient,
-	}
+	c := NewForTest(fakeSleeper.URL())
 
 	tests := []struct {
 		username string
@@ -155,10 +146,7 @@ func TestGetLeaguesForUser(t *testing.T) {
 	fakeSleeper := testutils.NewFakeSleeperServer()
 	defer fakeSleeper.Close()
 
-	c := &client{
-		url:        fakeSleeper.URL(),
-		httpClient: http.DefaultClient,
-	}
+	c := NewForTest(fakeSleeper.URL())
 
 	tests := []struct {
 		userID   string
@@ -186,6 +174,42 @@ func TestGetLeaguesForUser(t *testing.T) {
 				if err != nil {
 					t.Errorf("expected no error, but got: '%v'", err)
 				}
+			}
+		})
+	}
+}
+
+func TestGetLeagueManagers(t *testing.T) {
+	fakeSleeper := testutils.NewFakeSleeperServer()
+	defer fakeSleeper.Close()
+	c := NewForTest(fakeSleeper.URL())
+
+	expectedManagers := []model.LeagueManager{
+		{ExternalID: "300638784440004608", TeamName: "Puk Nukem", ManagerName: "8thAndFinalRule", JoinKey: "1"},
+		{ExternalID: "362744067425296384", TeamName: "No-Bell Prizes", ManagerName: "mww", JoinKey: "4"},
+		{ExternalID: "300368913101774848", ManagerName: "gee17", JoinKey: "6"},
+		{ExternalID: "325106323354046464", TeamName: "Jolly Roger", ManagerName: "Jollymon", JoinKey: "7"},
+	}
+
+	tests := []struct {
+		league   string
+		expected []model.LeagueManager
+		errMsg   string
+	}{
+		{league: "924039165950484480", expected: expectedManagers, errMsg: ""},
+		{league: "1234", expected: nil, errMsg: "no managers found"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.league, func(t *testing.T) {
+			managers, err := c.GetLeagueManagers(tc.league)
+			if tc.errMsg != "" {
+				if err.Error() != tc.errMsg {
+					t.Errorf("expected error to be: %s, but got: %v", tc.errMsg, err)
+				}
+			}
+			if !reflect.DeepEqual(tc.expected, managers) {
+				t.Errorf("expected mangers to be: %v, but was: %v", tc.expected, managers)
 			}
 		})
 	}

@@ -472,6 +472,71 @@ func TestLeagues(t *testing.T) {
 	}
 }
 
+func TestLeagueManagers(t *testing.T) {
+	ctx := context.Background()
+	// A league to add managers to
+	l := model.League{
+		Platform:   model.PlatformSleeper,
+		ExternalID: "10",
+		Name:       "League 10",
+		Year:       "2024",
+	}
+
+	if err := testDB.AddLeague(ctx, &l); err != nil {
+		t.Fatalf("error adding league: %v", err)
+	}
+
+	m1 := model.LeagueManager{
+		ExternalID:  "1",
+		TeamName:    "Team 1",
+		ManagerName: "Manager Name 1",
+		JoinKey:     "1",
+	}
+	m2 := model.LeagueManager{
+		ExternalID:  "2",
+		TeamName:    "Team 2",
+		ManagerName: "Manager Name 2",
+		JoinKey:     "2",
+	}
+	m3 := model.LeagueManager{
+		ExternalID:  "3",
+		TeamName:    "Team 3",
+		ManagerName: "Manager Name 3",
+		JoinKey:     "3",
+	}
+	for _, m := range []model.LeagueManager{m1, m2, m3} {
+		if err := testDB.SaveLeagueManager(ctx, l.ID, &m); err != nil {
+			t.Fatalf("error adding manager to league: %v", err)
+		}
+	}
+
+	found, err := testDB.GetLeagueManagers(ctx, l.ID)
+	if err != nil {
+		t.Fatalf("error getting league managers: %v", err)
+	}
+	expected := []model.LeagueManager{m1, m2, m3}
+	if !reflect.DeepEqual(expected, found) {
+		t.Fatalf("expected leagues not found, got: %v", found)
+	}
+
+	// Update a record
+	m2.TeamName = "New team name"
+	if err := testDB.SaveLeagueManager(ctx, l.ID, &m2); err != nil {
+		t.Fatalf("error saving updated team name: %v", err)
+	}
+
+	found, err = testDB.GetLeagueManagers(ctx, l.ID)
+	if err != nil {
+		t.Fatalf("error getting league managers: %v", err)
+	}
+	if len(found) != 3 {
+		t.Fatalf("expected to find 3 manager, found: %d", len(found))
+	}
+	if found[1].TeamName != "New team name" {
+		t.Fatal("TeamName for m2 not updated as expected")
+	}
+}
+
 func getPlayer() *model.Player {
 	id := atomic.AddInt32(&idCtr, 1)
 

@@ -2,3 +2,23 @@
 
 <div>year: {{ .Year }}</div>
 <div>archived: {{ .Archived }}</div>
+
+<div id="managers">
+  <h2>Managers</h2>
+  {{ if .Managers }}
+    <ul>
+      {{ range $m := .Managers }}
+        <li>{{ $m.ManagerName }} {{ if $m.TeamName }}({{ $m.TeamName }}){{ end }}</li>
+      {{ end }}
+    </ul>
+  {{ else }}
+    <div>No managers found</div>
+  {{ end }}
+</div>
+
+<div class="refreshManagers">
+  <form id="refreshmanagers" method="post" action="/leagues/{{ .ID }}/managers">
+    <input type="hidden" id="leagueID" name="leagueID" value="{{ .ID }}" />
+    <div><input type="submit" value="Sync Managers" /></div>
+  </form>
+</div>

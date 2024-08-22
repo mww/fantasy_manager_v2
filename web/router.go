@@ -41,6 +41,7 @@ func getRouter(ctrl controller.C, render *render.Render) *chi.Mux {
 	r.Route("/leagues", func(r chi.Router) {
 		r.Get("/", leaguesHandler(ctrl, render))
 		r.Get("/{leagueID:\\d+}", getLeagueHandler(ctrl, render))
+		r.Post("/{leagueID:\\d+}/managers", refreshLeagueManagersHandler(ctrl, render))
 		r.Get("/platformLeagues", platformLeaguesHandler(ctrl, render))
 		r.Post("/", leaguesPostHandler(ctrl, render))
 	})

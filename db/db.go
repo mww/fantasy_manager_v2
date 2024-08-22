@@ -23,6 +23,8 @@ type DB interface {
 
 	ListLeagues(ctx context.Context) ([]model.League, error)
 	GetLeague(ctx context.Context, id int32) (*model.League, error)
+	GetLeagueManagers(ctx context.Context, leagueID int32) ([]model.LeagueManager, error)
+	SaveLeagueManager(ctx context.Context, leagueID int32, managers *model.LeagueManager) error
 	AddLeague(ctx context.Context, league *model.League) error
 	ArchiveLeague(ctx context.Context, id int32) error
 }

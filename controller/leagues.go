@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -66,8 +67,50 @@ func (c *controller) AddLeague(ctx context.Context, platform, externalID, name, 
 	return l, nil
 }
 
+func (c *controller) AddLeagueManagers(ctx context.Context, leagueID int32) (*model.League, error) {
+	l, err := c.GetLeague(ctx, leagueID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting league from DB: %w", err)
+	}
+
+	switch l.Platform {
+	case model.PlatformSleeper:
+		l.Managers, err = c.sleeper.GetLeagueManagers(l.ExternalID)
+		if err != nil {
+			return nil, fmt.Errorf("error loading managers from sleeper for %s: %w", l.ExternalID, err)
+		}
+	default:
+		return nil, fmt.Errorf("error platform not supported for league managers: %s", l.Platform)
+	}
+
+	for _, m := range l.Managers {
+		if err := c.db.SaveLeagueManager(ctx, leagueID, &m); err != nil {
+			return nil, fmt.Errorf("error saving league manager: %w", err)
+		}
+	}
+
+	return c.GetLeague(ctx, leagueID)
+}
+
 func (c *controller) GetLeague(ctx context.Context, id int32) (*model.League, error) {
-	return c.db.GetLeague(ctx, id)
+	l, err := c.db.GetLeague(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up league: %w", err)
+	}
+
+	l.Managers, err = c.db.GetLeagueManagers(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up league manages: %w", err)
+	}
+
+	switch l.Platform {
+	case model.PlatformSleeper:
+		c.sleeper.SortManagers(l.Managers)
+	default:
+		log.Printf("platform %s does not support sorting managers", l.Platform)
+	}
+
+	return l, nil
 }
 
 func (c *controller) ListLeagues(ctx context.Context) ([]model.League, error) {

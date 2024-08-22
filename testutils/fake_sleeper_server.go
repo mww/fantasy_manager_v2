@@ -26,6 +26,11 @@ func NewFakeSleeperServer() *FakeSleeperServer {
 			r.Get("/{userID}/leagues/nfl/{year}", userLeaguesHandler)
 			r.Get("/{username}", sleeperUserHandler)
 		})
+
+		r.Route("/league/{leagueID}", func(r chi.Router) {
+			r.Get("/users", leagueUsersHandler)
+			r.Get("/rosters", leagueRostersHandler)
+		})
 	})
 
 	return &FakeSleeperServer{
@@ -65,6 +70,26 @@ func sleeperUserHandler(w http.ResponseWriter, r *http.Request) {
 		// requesting a user that doesn't exist seems to return a 200 with "null" as the response body as of 2024-08-12
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("null"))
+	}
+}
+
+func leagueUsersHandler(w http.ResponseWriter, r *http.Request) {
+	leagueID := chi.URLParam(r, "leagueID")
+	if leagueID == "924039165950484480" {
+		serveFile(w, "league_users.json")
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("[]"))
+	}
+}
+
+func leagueRostersHandler(w http.ResponseWriter, r *http.Request) {
+	leagueID := chi.URLParam(r, "leagueID")
+	if leagueID == "924039165950484480" {
+		serveFile(w, "league_rosters.json")
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("[]"))
 	}
 }
 
