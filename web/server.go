@@ -69,6 +69,7 @@ func newRender() *render.Render {
 				"date":   dateFormatter,
 				"height": heightFormatter,
 				"year":   yearFormatter,
+				"score":  scoreFormatter,
 			},
 		},
 	})
@@ -110,4 +111,9 @@ func yearFormatter(t time.Time) string {
 		return "Unknown"
 	}
 	return t.Format("2006")
+}
+
+func scoreFormatter(s int32) string {
+	d := float64(s) / 1000
+	return fmt.Sprintf("%0.2f", d)
 }

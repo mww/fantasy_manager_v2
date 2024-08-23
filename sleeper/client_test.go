@@ -3,9 +3,12 @@ package sleeper
 import (
 	_ "embed"
 	"errors"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/mww/fantasy_manager_v2/model"
@@ -63,14 +66,20 @@ func TestLoadPlayers_success(t *testing.T) {
 	if players == nil {
 		t.Fatalf("players shoud have been nil")
 	}
-	if len(players) != len(expected) {
-		t.Fatalf("wrong number of players, expected 4, got %d", len(players))
+
+	// Validate that at least all of the expected players are in the results.
+	// There may be more players, as I add more to the fake sleeper data as
+	// needed, but at the very least we should have the expected ones.
+	playerMap := make(map[string]*model.Player)
+	for _, p := range players {
+		log.Printf("%s - %s %s", p.ID, p.FirstName, p.LastName)
+		playerMap[p.ID] = &p
 	}
 
-	for _, p := range players {
-		e, found := expected[p.ID] // Get the expected data
+	for id, e := range expected {
+		p, found := playerMap[id] // Get the expected data
 		if !found {
-			t.Fatalf("unexpected player in the response %s", p.ID)
+			t.Fatalf("expected player not found in response %s", id)
 		}
 
 		if p.FirstName != e.FirstName {
@@ -212,5 +221,63 @@ func TestGetLeagueManagers(t *testing.T) {
 				t.Errorf("expected mangers to be: %v, but was: %v", tc.expected, managers)
 			}
 		})
+	}
+}
+
+func TestGetMatchupResults(t *testing.T) {
+	fakeSleeper := testutils.NewFakeSleeperServer()
+	defer fakeSleeper.Close()
+	c := NewForTest(fakeSleeper.URL())
+
+	expectedMatchups := []model.Matchup{
+		{
+			TeamA:     &model.TeamResult{JoinKey: "1", Score: 107540},
+			TeamB:     &model.TeamResult{JoinKey: "4", Score: 84300},
+			MatchupID: 3,
+			Week:      1,
+		},
+		{
+			TeamA:     &model.TeamResult{JoinKey: "6", Score: 85060},
+			TeamB:     &model.TeamResult{JoinKey: "7", Score: 114240},
+			MatchupID: 5,
+			Week:      1,
+		},
+	}
+	expectedScores := []model.PlayerScore{
+		{PlayerID: "1352", Score: 8700, Week: 1},
+		{PlayerID: "3225", Score: 2000, Week: 1},
+		{PlayerID: "4198", Score: -700, Week: 1},
+		{PlayerID: "4993", Score: 5130, Week: 1},
+		{PlayerID: "7601", Score: 6000, Week: 1},
+		{PlayerID: "8154", Score: 13100, Week: 1},
+		{PlayerID: "8408", Score: 0, Week: 1},
+		{PlayerID: "10219", Score: 700, Week: 1},
+		{PlayerID: "10222", Score: 5600, Week: 1},
+		{PlayerID: "10223", Score: 0, Week: 1},
+		{PlayerID: "11370", Score: 0, Week: 1},
+		{PlayerID: "11439", Score: -200, Week: 1},
+	}
+
+	matchups, scores, err := c.GetMatchupResults(testutils.ValidLeagueID, 1)
+	if err != nil {
+		t.Fatalf("unexpected error getting matchup results: %v", err)
+	}
+
+	if !reflect.DeepEqual(expectedMatchups, matchups) {
+		t.Errorf("matchups were not the expected ones, got: %v", matchups)
+	}
+
+	// Sort the scores so they should be in the same order as the expected scores
+	slices.SortFunc(scores, func(a, b model.PlayerScore) int {
+		idA, e1 := strconv.Atoi(a.PlayerID)
+		idB, e2 := strconv.Atoi(b.PlayerID)
+		if err := errors.Join(e1, e2); err != nil {
+			t.Errorf("error parsing player id when sorting player scores: %v", err)
+			return 0
+		}
+		return idA - idB
+	})
+	if !reflect.DeepEqual(expectedScores, scores) {
+		t.Errorf("player scores were not the expected ones, got: %v", scores)
 	}
 }

@@ -57,7 +57,16 @@ func getPlayerHandler(ctrl controller.C, render *render.Render) http.HandlerFunc
 			return
 		}
 
-		render.HTML(w, http.StatusOK, "player", p)
+		scores, err := ctrl.GetPlayerScores(r.Context(), playerID)
+		if err != nil {
+			log.Printf("error getting player scores: %v", err)
+		}
+
+		data := map[string]any{
+			"player": p,
+			"scores": scores,
+		}
+		render.HTML(w, http.StatusOK, "player", data)
 	}
 }
 
@@ -201,20 +210,86 @@ func getLeagueHandler(ctrl controller.C, render *render.Render) http.HandlerFunc
 
 func refreshLeagueManagersHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		leagueID := chi.URLParam(r, "leagueID")
-		id, err := strconv.Atoi(leagueID)
+		leagueID, err := getLeagueID(r)
 		if err != nil {
-			render.HTML(w, http.StatusBadRequest, "400", fmt.Sprintf("error parsing league id: %v", err))
+			render.HTML(w, http.StatusBadRequest, "400", err)
 			return
 		}
 
-		_, err = ctrl.AddLeagueManagers(r.Context(), int32(id))
+		_, err = ctrl.AddLeagueManagers(r.Context(), leagueID)
 		if err != nil {
 			render.HTML(w, http.StatusInternalServerError, "500", err.Error())
 			return
 		}
 
-		http.Redirect(w, r, fmt.Sprintf("/leagues/%d", id), http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("/leagues/%d", leagueID), http.StatusSeeOther)
+	}
+}
+
+func syncWeekResultsHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		leagueID, err := getLeagueID(r)
+		if err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", err)
+			return
+		}
+
+		if err := r.ParseForm(); err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", err)
+			return
+		}
+		week, err := strconv.Atoi(r.FormValue("week"))
+		if err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", fmt.Errorf("error getting week value: %v", err))
+			return
+		}
+		if week < 1 || week > 18 {
+			render.HTML(w, http.StatusBadRequest, "400", "week must be between 1 and 18")
+			return
+		}
+
+		if err := ctrl.SyncResultsFromPlatform(r.Context(), leagueID, week); err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err)
+			return
+		}
+
+		http.Redirect(w, r, fmt.Sprintf("/leagues/%d/week/%d", leagueID, week), http.StatusSeeOther)
+	}
+}
+
+func getLeagueResultsHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		leagueID, err := getLeagueID(r)
+		if err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", err)
+			return
+		}
+
+		week, err := strconv.Atoi(chi.URLParam(r, "week"))
+		if err != nil {
+			msg := fmt.Sprintf("error reading week value: %v", err)
+			render.HTML(w, http.StatusBadRequest, "400", msg)
+			return
+		}
+
+		league, err := ctrl.GetLeague(r.Context(), leagueID)
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err)
+			return
+		}
+
+		matchups, err := ctrl.GetLeagueResults(r.Context(), leagueID, week)
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err)
+			return
+		}
+
+		data := map[string]any{
+			"matchups": matchups,
+			"league":   league,
+			"week":     week,
+		}
+		render.HTML(w, http.StatusOK, "leagueResults", data)
 	}
 }
 
@@ -267,4 +342,13 @@ func leaguesPostHandler(ctrl controller.C, render *render.Render) http.HandlerFu
 
 		http.Redirect(w, r, fmt.Sprintf("/leagues/%d", l.ID), http.StatusSeeOther)
 	}
+}
+
+func getLeagueID(r *http.Request) (int32, error) {
+	leagueID := chi.URLParam(r, "leagueID")
+	id, err := strconv.Atoi(leagueID)
+	if err != nil {
+		return 0, fmt.Errorf("error parsing leagueID: %w", err)
+	}
+	return int32(id), err
 }

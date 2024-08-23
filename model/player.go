@@ -69,3 +69,11 @@ type Change struct {
 func (c *Change) String() string {
 	return fmt.Sprintf("%s changed from '%s' to '%s'", c.PropertyName, c.OldValue, c.NewValue)
 }
+
+// PlayerScore represents how many fantasy points a specific player scored in a single week in a single league.
+type PlayerScore struct {
+	PlayerID string
+	Score    int32
+	LeagueID int32
+	Week     int
+}

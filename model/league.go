@@ -19,6 +19,21 @@ type LeagueManager struct {
 	JoinKey     string
 }
 
+// TODO - getting a Match from the point of view of one of the teams, the other is opponent
+type TeamResult struct {
+	TeamID   string
+	TeamName string
+	Score    int32
+	JoinKey  string // Not persisted
+}
+
+type Matchup struct {
+	TeamA     *TeamResult
+	TeamB     *TeamResult
+	MatchupID int32
+	Week      int
+}
+
 func IsPlatformSupported(platform string) bool {
 	return platform == PlatformSleeper
 }

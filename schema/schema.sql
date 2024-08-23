@@ -68,6 +68,32 @@ CREATE TABLE IF NOT EXISTS league_managers (
     PRIMARY KEY (league_id, external_id)
 );
 
+-- Keep track of how many fantasy points each player scored, by league and week.
+-- The score is saved as 1/1000th of a point. So a score of 16.46 is saved as 16460.
+-- Since most platforms only score to the 1/10th of a point, this should give room to grow. 
+CREATE TABLE IF NOT EXISTS player_scores (
+    player_id varchar(16) REFERENCES players(id),
+    league_id serial REFERENCES leagues(id),
+    week      smallint NOT NULL,
+    score     integer NOT NULL,
+    PRIMARY KEY (player_id, league_id, week)
+);
+
+CREATE SEQUENCE IF NOT EXISTS match_ids AS integer;
+
+-- One half of a match up. This only has the score for one team in the match. The other
+-- team will have the same match_id so they can be easily joined.
+-- Like in player_points, score are staved as 1/1000th of a point.
+CREATE TABLE IF NOT EXISTS team_results (
+    id             serial PRIMARY KEY,
+    league_id      serial REFERENCES leagues(id),
+    week           smallint NOT NULL,
+    match_id       serial NOT NULL, -- from the match_ids sequence
+    team           varchar(64) NOT NULL,
+    score          integer NOT NULL,
+    FOREIGN KEY (league_id, team) REFERENCES league_managers(league_id, external_id)
+);
+
 CREATE INDEX IF NOT EXISTS player_name_idx ON players USING gin(fts_player);
 CREATE INDEX IF NOT EXISTS player_yahoo_id_idx ON players(yahoo_id);
 CREATE INDEX IF NOT EXISTS player_change_idx ON player_changes(player, created DESC);

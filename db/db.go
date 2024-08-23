@@ -13,6 +13,10 @@ type DB interface {
 	DeleteNickname(ctx context.Context, id string, oldNickname string) error
 	Search(ctx context.Context, query string, pos model.Position, team *model.NFLTeam) ([]model.Player, error)
 
+	SavePlayerScores(ctx context.Context, leagueID int32, week int, scores []model.PlayerScore) error
+	// Look up the scores for a specific player regardless of league or week.
+	GetPlayerScores(ctx context.Context, playerID string) ([]model.PlayerScore, error)
+
 	// Lists the 20 most recent rankings in the system. The most recent ranking is returned first.
 	// Only the ranking metadata, the ID and date, are returned. The actual ranking data is returned
 	// with GetRanking().
@@ -27,4 +31,7 @@ type DB interface {
 	SaveLeagueManager(ctx context.Context, leagueID int32, managers *model.LeagueManager) error
 	AddLeague(ctx context.Context, league *model.League) error
 	ArchiveLeague(ctx context.Context, id int32) error
+
+	SaveResults(ctx context.Context, leagueID int32, matchups []model.Matchup) error
+	GetResults(ctx context.Context, leagueID int32, week int) ([]model.Matchup, error)
 }

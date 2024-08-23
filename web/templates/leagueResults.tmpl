@@ -1,0 +1,14 @@
+<h1>{{ .league.Name }} ({{ .league.Year }})</h1>
+<h3>Week: {{ .week }}</h3>
+
+<div>
+    <h3>Match ups</h3>
+    <table>
+        {{ range $m := .matchups }}
+            <tr>
+                <td>{{ $m.TeamA.TeamName }} ({{ $m.TeamA.Score | score }})</td>
+                <td>{{ $m.TeamB.TeamName }} ({{ $m.TeamB.Score | score }})</td>
+            </tr>
+        {{ end }}
+    </table>
+</div>
