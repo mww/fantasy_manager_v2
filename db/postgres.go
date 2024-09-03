@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/itbasis/go-clock"
@@ -151,6 +152,60 @@ func (db *postgresDB) Search(ctx context.Context, q string, pos model.Position, 
 			return nil, err
 		}
 		results = append(results, *p)
+	}
+
+	return results, nil
+}
+
+func (db *postgresDB) SavePlayerScores(ctx context.Context, leagueID int32, week int, scores []model.PlayerScore) error {
+	const insert = `INSERT INTO player_scores(player_id, league_id, week, score) 
+			VALUES (@playerID, @leagueID, @week, @score)`
+
+	tx, err := db.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	for _, s := range scores {
+		args := pgx.NamedArgs{
+			"playerID": s.PlayerID,
+			"leagueID": leagueID,
+			"week":     week,
+			"score":    s.Score,
+		}
+		if _, err := tx.Exec(ctx, insert, args); err != nil {
+			return fmt.Errorf("error inserting score for %s in league %d: %w", s.PlayerID, leagueID, err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("error commiting player scores: %w", err)
+	}
+
+	return nil
+}
+
+func (db *postgresDB) GetPlayerScores(ctx context.Context, playerID string) ([]model.PlayerScore, error) {
+	const query = `SELECT league_id, week, score FROM player_scores 
+			WHERE player_id = @playerID ORDER BY league_id, week`
+
+	rows, err := db.pool.Query(ctx, query, pgx.NamedArgs{"playerID": playerID})
+	if err != nil {
+		return nil, fmt.Errorf("error querying player scores: %w", err)
+	}
+
+	results := make([]model.PlayerScore, 0, 32)
+	for rows.Next() {
+		var s model.PlayerScore
+		if err := rows.Scan(&s.LeagueID, &s.Week, &s.Score); err != nil {
+			return nil, fmt.Errorf("error scanning score: %w", err)
+		}
+		s.PlayerID = playerID
+		results = append(results, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error with rows: %w", err)
 	}
 
 	return results, nil
@@ -466,6 +521,104 @@ func (db *postgresDB) ArchiveLeague(ctx context.Context, id int32) error {
 	}
 
 	return nil
+}
+
+func (db *postgresDB) SaveResults(ctx context.Context, leagueID int32, matchups []model.Matchup) error {
+	const insert = `INSERT INTO team_results(league_id, week, match_id, team, score)
+			VALUES(@leagueID, @week, @matchID, @team, @score)`
+	const seq = `SELECT nextval('match_ids')`
+
+	tx, err := db.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	for _, m := range matchups {
+		var matchID int32
+		if err := tx.QueryRow(ctx, seq).Scan(&matchID); err != nil {
+			return fmt.Errorf("error getting next sequence number: %w", err)
+		}
+
+		argsA := namedArgsForTeamResult(leagueID, matchID, m.Week, m.TeamA)
+		if _, err := tx.Exec(ctx, insert, argsA); err != nil {
+			return fmt.Errorf("error inserting teamA result: %w", err)
+		}
+
+		argsB := namedArgsForTeamResult(leagueID, matchID, m.Week, m.TeamB)
+		if _, err := tx.Exec(ctx, insert, argsB); err != nil {
+			return fmt.Errorf("error inserting teamB result: %w", err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("error commiting transaction: %w", err)
+	}
+
+	return nil
+}
+
+func namedArgsForTeamResult(leagueID int32, matchID int32, week int, tr *model.TeamResult) pgx.NamedArgs {
+	return pgx.NamedArgs{
+		"leagueID": leagueID,
+		"week":     week,
+		"matchID":  matchID,
+		"team":     tr.TeamID,
+		"score":    tr.Score,
+	}
+}
+
+func (db *postgresDB) GetResults(ctx context.Context, leagueID int32, week int) ([]model.Matchup, error) {
+	const query = `SELECT 
+					league_managers.team_name, 
+					league_managers.manager_name,
+					league_managers.external_id,
+					team_results.match_id,
+					team_results.score 
+				FROM team_results INNER JOIN league_managers ON 
+					(team_results.league_id=league_managers.league_id AND team_results.team=league_managers.external_id)
+				WHERE team_results.league_id=@leagueID AND team_results.week=@week
+				ORDER BY team_results.match_id`
+
+	rows, err := db.pool.Query(ctx, query, pgx.NamedArgs{"leagueID": leagueID, "week": week})
+	if err != nil {
+		return nil, fmt.Errorf("error querying league results: %w", err)
+	}
+
+	resultMap := make(map[int32]*model.Matchup)
+	for rows.Next() {
+		var team, manager, id string
+		var matchID, score int32
+		if err := rows.Scan(&team, &manager, &id, &matchID, &score); err != nil {
+			return nil, fmt.Errorf("error scanning team result: %w", err)
+		}
+		tr := &model.TeamResult{
+			TeamID:   id,
+			TeamName: first(team, manager),
+			Score:    score,
+		}
+
+		if m, found := resultMap[matchID]; found {
+			m.TeamB = tr
+		} else {
+			resultMap[matchID] = &model.Matchup{
+				TeamA:     tr,
+				MatchupID: matchID,
+				Week:      week,
+			}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error reading league results: %w", err)
+	}
+
+	results := make([]model.Matchup, 0, len(resultMap))
+	for _, v := range resultMap {
+		results = append(results, *v)
+	}
+	slices.SortFunc(results, func(a, b model.Matchup) int {
+		return int(a.MatchupID - b.MatchupID)
+	})
+	return results, nil
 }
 
 func (db *postgresDB) getPlayer(ctx context.Context, id string) (*model.Player, error) {
@@ -824,4 +977,13 @@ func (t *DBNFLTeam) TextValue() (pgtype.Text, error) {
 		String: t.team.String(),
 		Valid:  true,
 	}, nil
+}
+
+func first(args ...string) string {
+	for _, a := range args {
+		if strings.TrimSpace(a) != "" {
+			return a
+		}
+	}
+	return ""
 }

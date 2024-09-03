@@ -6,9 +6,12 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 )
+
+const ValidLeagueID = "924039165950484480"
 
 //go:embed sleeperdata
 var sleeperdata embed.FS
@@ -30,6 +33,7 @@ func NewFakeSleeperServer() *FakeSleeperServer {
 		r.Route("/league/{leagueID}", func(r chi.Router) {
 			r.Get("/users", leagueUsersHandler)
 			r.Get("/rosters", leagueRostersHandler)
+			r.Get("/matchups/{week:\\d+}", leagueMatchupsHandlers)
 		})
 	})
 
@@ -75,7 +79,7 @@ func sleeperUserHandler(w http.ResponseWriter, r *http.Request) {
 
 func leagueUsersHandler(w http.ResponseWriter, r *http.Request) {
 	leagueID := chi.URLParam(r, "leagueID")
-	if leagueID == "924039165950484480" {
+	if leagueID == ValidLeagueID {
 		serveFile(w, "league_users.json")
 	} else {
 		w.WriteHeader(http.StatusOK)
@@ -85,12 +89,30 @@ func leagueUsersHandler(w http.ResponseWriter, r *http.Request) {
 
 func leagueRostersHandler(w http.ResponseWriter, r *http.Request) {
 	leagueID := chi.URLParam(r, "leagueID")
-	if leagueID == "924039165950484480" {
+	if leagueID == ValidLeagueID {
 		serveFile(w, "league_rosters.json")
 	} else {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("[]"))
 	}
+}
+
+func leagueMatchupsHandlers(w http.ResponseWriter, r *http.Request) {
+	leagueID := chi.URLParam(r, "leagueID")
+	if leagueID == ValidLeagueID {
+		if week, err := strconv.Atoi(chi.URLParam(r, "week")); err == nil {
+			if week == 1 {
+				serveFile(w, "matchups-week-01.json")
+				return
+			}
+		} else {
+			log.Printf("error parsing week param: %v", err)
+		}
+	}
+
+	// TODO: figure out what is actually returned
+	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte(`{"errMsg": "not found"}`))
 }
 
 func serveFile(w http.ResponseWriter, name string) {

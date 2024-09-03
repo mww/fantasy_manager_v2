@@ -289,5 +289,89 @@
             "RB"
         ],
         "search_first_name": "kyle"
+    },
+    "1352": {
+        "player_id": "1352",
+        "first_name": "Robert",
+        "last_name": "Woods",
+        "position": "WR",
+        "team": "HOU"
+    },
+    "3225": {
+        "player_id": "3225",
+        "first_name": "Tyler",
+        "last_name": "Boyd",
+        "position": "WR",
+        "team": "TEN"
+    },
+    "4198": {
+        "player_id": "4198",
+        "first_name": "Jamal",
+        "last_name": "Agnew",
+        "position": "WR",
+        "team": "CAR"
+    },
+    "4993": {
+        "player_id": "4993",
+        "first_name": "Mike",
+        "last_name": "Gesicki",
+        "position": "TE",
+        "team": "NEP"
+    },
+    "7601": {
+        "player_id": "7601",
+        "first_name": "Rondale",
+        "last_name": "Moore",
+        "position": "WR",
+        "team": "ATL"
+    },
+    "8154": {
+        "player_id": "8154",
+        "first_name": "Brian",
+        "last_name": "Robinson",
+        "position": "RB",
+        "team": "WAS"
+    },
+    "8408": {
+        "player_id": "8408",
+        "first_name": "Jordan",
+        "last_name": "Mason",
+        "position": "RB",
+        "team": "SF"
+    },
+    "10219": {
+        "player_id": "10219",
+        "first_name": "Chris",
+        "last_name": "Rodriguez",
+        "position": "RB",
+        "team": "WAS"
+    },
+    "10222": {
+        "player_id": "10222",
+        "first_name": "Jayden",
+        "last_name": "Reed",
+        "position": "WR",
+        "team": "GBP"
+    },
+    "10223": {
+        "player_id": "10223",
+        "first_name": "Eric",
+        "last_name": "Gray",
+        "position": "RB",
+        "team": "NYG"
+    },
+    "11370": {
+        "player_id": "11370",
+        "first_name": "Chris",
+        "last_name": "Brooks",
+        "position": "RB",
+        "team": "MIA"
+    },
+    "11439": {
+        "player_id": "11439",
+        "first_name": "Jaleel",
+        "last_name": "McLaughlin",
+        "position": "RB",
+        "team": "DEN"
     }
 }

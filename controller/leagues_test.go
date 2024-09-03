@@ -35,7 +35,7 @@ func TestGetLeaguesFromPlatform(t *testing.T) {
 			{Name: "The Megalabowl", ExternalID: "1005178517580746753", Year: "2024", Platform: "sleeper"},
 		}},
 		"unsupported platform": {username: "sleeperuser", platform: "ESPN", year: "2024",
-			exErrMsg: "unsupported platform"},
+			exErrMsg: "ESPN is not a supported platform"},
 		"bad year": {username: "sleeperuser", platform: "sleeper", year: "24",
 			exErrMsg: "year parameter must be in the YYYY format, got: 24"},
 		"unknown username": {username: "unknown", platform: "sleeper", year: "2024",
@@ -136,13 +136,114 @@ func TestAddLeagueManagers(t *testing.T) {
 		t.Fatalf("error adding league managers: %v", err)
 	}
 
+	l2, err := ctrl.GetLeague(ctx, l.ID)
+	if err != nil {
+		t.Fatalf("error loading league: %v", err)
+	}
+
 	expectedManagers := []model.LeagueManager{
 		{ExternalID: "300638784440004608", TeamName: "Puk Nukem", ManagerName: "8thAndFinalRule", JoinKey: "1"},
 		{ExternalID: "362744067425296384", TeamName: "No-Bell Prizes", ManagerName: "mww", JoinKey: "4"},
 		{ExternalID: "300368913101774848", ManagerName: "gee17", JoinKey: "6"},
 		{ExternalID: "325106323354046464", TeamName: "Jolly Roger", ManagerName: "Jollymon", JoinKey: "7"},
 	}
-	if !reflect.DeepEqual(expectedManagers, l.Managers) {
+	if !reflect.DeepEqual(expectedManagers, l2.Managers) {
 		t.Errorf("l.Managers does not match expected value, got: %v", l.Managers)
+	}
+}
+
+func TestSyncResultsFromPlatform(t *testing.T) {
+	ctx := context.Background()
+
+	fakeSleeper := testutils.NewFakeSleeperServer()
+	defer testutils.NewFakeSleeperServer()
+	sleeper := sleeper.NewForTest(fakeSleeper.URL())
+
+	ctrl, err := New(clock.New(), sleeper, testDB.DB)
+	if err != nil {
+		t.Fatalf("error creating new controller: %v", err)
+	}
+
+	if err := ctrl.UpdatePlayers(ctx); err != nil {
+		t.Fatalf("error adding players: %v", err)
+	}
+
+	l, err := ctrl.AddLeague(ctx, model.PlatformSleeper, testutils.ValidLeagueID, "Footclan & Friends Dynasty", "2024")
+	if err != nil {
+		t.Fatalf("error adding league: %v", err)
+	}
+
+	l, err = ctrl.AddLeagueManagers(ctx, l.ID)
+	if err != nil {
+		t.Fatalf("error adding league managers: %v", err)
+	}
+
+	if err := ctrl.SyncResultsFromPlatform(ctx, l.ID, 1); err != nil {
+		t.Fatalf("error syncing league results: %v", err)
+	}
+
+	matchups, err := ctrl.GetLeagueResults(ctx, l.ID, 1)
+	if err != nil {
+		t.Fatalf("error loading matchups: %v", err)
+	}
+
+	expectedMatchups := []model.Matchup{
+		{
+			TeamA: &model.TeamResult{
+				TeamID: "300638784440004608", TeamName: "Puk Nukem", Score: 107540,
+			},
+			TeamB: &model.TeamResult{
+				TeamID: "362744067425296384", TeamName: "No-Bell Prizes", Score: 84300,
+			},
+			Week: 1,
+		},
+		{
+			TeamA: &model.TeamResult{
+				TeamID: "300368913101774848", TeamName: "gee17", Score: 85060,
+			},
+			TeamB: &model.TeamResult{
+				TeamID: "325106323354046464", TeamName: "Jolly Roger", Score: 114240,
+			},
+			Week: 1,
+		},
+	}
+
+	if len(matchups) != len(expectedMatchups) {
+		t.Errorf("expected %d matchups, got %d", len(expectedMatchups), len(matchups))
+	}
+
+	for i, a := range matchups {
+		e := expectedMatchups[i]
+		if e.Week != a.Week {
+			t.Errorf("expected week to be %d, but was %d", e.Week, a.Week)
+		}
+		if !reflect.DeepEqual(e.TeamA, a.TeamA) {
+			t.Errorf("expected TeamA to be %v, got: %v, id: %d", e.TeamA, a.TeamA, a.MatchupID)
+		}
+	}
+
+	scores, err := ctrl.GetPlayerScores(ctx, "8154")
+	if err != nil {
+		t.Fatalf("error getting player scores for id 8154: %v", err)
+	}
+
+	verified := false
+	for _, s := range scores {
+		if s.LeagueID != l.ID {
+			continue
+		}
+		if verified {
+			t.Errorf("score in league already verified, unexpected value: %v", s)
+			continue
+		}
+		expectedScore := model.PlayerScore{
+			PlayerID: "8154",
+			Score:    13100,
+			LeagueID: l.ID,
+			Week:     1,
+		}
+		if !reflect.DeepEqual(expectedScore, s) {
+			t.Errorf("player score not expected, got: %v", s)
+		}
 	}
 }

@@ -66,6 +66,10 @@ func (c *controller) UpdatePlayers(ctx context.Context) error {
 	return nil
 }
 
+func (c *controller) GetPlayerScores(ctx context.Context, playerID string) ([]model.PlayerScore, error) {
+	return c.db.GetPlayerScores(ctx, playerID)
+}
+
 func (c *controller) RunPeriodicPlayerUpdates(frequency time.Duration, shutdown chan bool, wg *sync.WaitGroup) {
 	ticker := time.NewTicker(frequency)
 	defer wg.Done()

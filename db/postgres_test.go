@@ -408,6 +408,79 @@ func TestAddRanking_negativeCases(t *testing.T) {
 	}
 }
 
+func TestSaveAndGetPlayerScores(t *testing.T) {
+	ctx := context.Background()
+
+	l1 := getLeague()
+	l2 := getLeague()
+	for _, l := range []*model.League{l1, l2} {
+		if err := testDB.AddLeague(ctx, l); err != nil {
+			t.Fatalf("error adding league: %v", err)
+		}
+	}
+	// Cleanup after the test
+	defer func() {
+		testDB.ArchiveLeague(ctx, l1.ID)
+		testDB.ArchiveLeague(ctx, l2.ID)
+	}()
+
+	p1 := getPlayer()
+	p2 := getPlayer()
+	for _, p := range []*model.Player{p1, p2} {
+		if err := testDB.SavePlayer(ctx, p); err != nil {
+			t.Fatalf("error adding player: %v", err)
+		}
+	}
+
+	// League 1
+	l1w1 := []model.PlayerScore{
+		{PlayerID: p1.ID, Score: 20220},
+		{PlayerID: p2.ID, Score: 5100},
+	}
+	if err := testDB.SavePlayerScores(ctx, l1.ID, 1, l1w1); err != nil {
+		t.Fatalf("error saving l1 w1 scores: %v", err)
+	}
+
+	l2w1 := []model.PlayerScore{
+		{PlayerID: p1.ID, Score: 14700},
+		{PlayerID: p2.ID, Score: 20500},
+	}
+	if err := testDB.SavePlayerScores(ctx, l2.ID, 1, l2w1); err != nil {
+		t.Fatalf("error saving l2 w1 scores: %v", err)
+	}
+
+	l1w2 := []model.PlayerScore{
+		{PlayerID: p1.ID, Score: 24720},
+		{PlayerID: p2.ID, Score: 20900},
+	}
+	if err := testDB.SavePlayerScores(ctx, l1.ID, 2, l1w2); err != nil {
+		t.Fatalf("error saving l1 w2 scores: %v", err)
+	}
+
+	l2w2 := []model.PlayerScore{
+		{PlayerID: p1.ID, Score: 3900},
+		{PlayerID: p2.ID, Score: 16400},
+	}
+	if err := testDB.SavePlayerScores(ctx, l2.ID, 2, l2w2); err != nil {
+		t.Fatalf("error saving l2 w2 scores: %v", err)
+	}
+
+	scores, err := testDB.GetPlayerScores(ctx, p2.ID)
+	if err != nil {
+		t.Fatalf("error fetching scores for p2: %v", err)
+	}
+
+	expectedScores := []model.PlayerScore{
+		{PlayerID: p2.ID, Score: 5100, LeagueID: l1.ID, Week: 1},
+		{PlayerID: p2.ID, Score: 20900, LeagueID: l1.ID, Week: 2},
+		{PlayerID: p2.ID, Score: 20500, LeagueID: l2.ID, Week: 1},
+		{PlayerID: p2.ID, Score: 16400, LeagueID: l2.ID, Week: 2},
+	}
+	if !reflect.DeepEqual(expectedScores, scores) {
+		t.Errorf("player scores not as expected, got: %v", scores)
+	}
+}
+
 func TestLeagues(t *testing.T) {
 	ctx := context.Background()
 
@@ -424,6 +497,11 @@ func TestLeagues(t *testing.T) {
 		Name:       "League 2",
 		Year:       "2024",
 	}
+	// Clean up after the test
+	defer func() {
+		testDB.ArchiveLeague(ctx, l1.ID)
+		testDB.ArchiveLeague(ctx, l2.ID)
+	}()
 
 	err := testDB.AddLeague(ctx, &l1)
 	if err != nil {
@@ -475,37 +553,21 @@ func TestLeagues(t *testing.T) {
 func TestLeagueManagers(t *testing.T) {
 	ctx := context.Background()
 	// A league to add managers to
-	l := model.League{
-		Platform:   model.PlatformSleeper,
-		ExternalID: "10",
-		Name:       "League 10",
-		Year:       "2024",
-	}
+	l := getLeague()
 
-	if err := testDB.AddLeague(ctx, &l); err != nil {
+	if err := testDB.AddLeague(ctx, l); err != nil {
 		t.Fatalf("error adding league: %v", err)
 	}
+	// Clean up after the test
+	defer func() {
+		testDB.ArchiveLeague(ctx, l.ID)
+	}()
 
-	m1 := model.LeagueManager{
-		ExternalID:  "1",
-		TeamName:    "Team 1",
-		ManagerName: "Manager Name 1",
-		JoinKey:     "1",
-	}
-	m2 := model.LeagueManager{
-		ExternalID:  "2",
-		TeamName:    "Team 2",
-		ManagerName: "Manager Name 2",
-		JoinKey:     "2",
-	}
-	m3 := model.LeagueManager{
-		ExternalID:  "3",
-		TeamName:    "Team 3",
-		ManagerName: "Manager Name 3",
-		JoinKey:     "3",
-	}
-	for _, m := range []model.LeagueManager{m1, m2, m3} {
-		if err := testDB.SaveLeagueManager(ctx, l.ID, &m); err != nil {
+	m1 := getLeagueManager()
+	m2 := getLeagueManager()
+	m3 := getLeagueManager()
+	for _, m := range []*model.LeagueManager{m1, m2, m3} {
+		if err := testDB.SaveLeagueManager(ctx, l.ID, m); err != nil {
 			t.Fatalf("error adding manager to league: %v", err)
 		}
 	}
@@ -514,14 +576,14 @@ func TestLeagueManagers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error getting league managers: %v", err)
 	}
-	expected := []model.LeagueManager{m1, m2, m3}
+	expected := []model.LeagueManager{*m1, *m2, *m3}
 	if !reflect.DeepEqual(expected, found) {
 		t.Fatalf("expected leagues not found, got: %v", found)
 	}
 
 	// Update a record
 	m2.TeamName = "New team name"
-	if err := testDB.SaveLeagueManager(ctx, l.ID, &m2); err != nil {
+	if err := testDB.SaveLeagueManager(ctx, l.ID, m2); err != nil {
 		t.Fatalf("error saving updated team name: %v", err)
 	}
 
@@ -534,6 +596,97 @@ func TestLeagueManagers(t *testing.T) {
 	}
 	if found[1].TeamName != "New team name" {
 		t.Fatal("TeamName for m2 not updated as expected")
+	}
+}
+
+func TestSaveAndGetResults(t *testing.T) {
+	ctx := context.Background()
+	// A league and managers
+	l := getLeague()
+
+	if err := testDB.AddLeague(ctx, l); err != nil {
+		t.Fatalf("error adding league: %v", err)
+	}
+	// Clean up after the test
+	defer func() {
+		testDB.ArchiveLeague(ctx, l.ID)
+	}()
+
+	m1 := getLeagueManager()
+	m2 := getLeagueManager()
+	m3 := getLeagueManager()
+	m4 := getLeagueManager()
+	for _, m := range []*model.LeagueManager{m1, m2, m3, m4} {
+		if err := testDB.SaveLeagueManager(ctx, l.ID, m); err != nil {
+			t.Fatalf("error adding manager to league: %v", err)
+		}
+	}
+
+	matchups := []model.Matchup{
+		{
+			MatchupID: 1,
+			Week:      2,
+			TeamA:     &model.TeamResult{TeamID: m1.ExternalID, Score: 100000},
+			TeamB:     &model.TeamResult{TeamID: m2.ExternalID, Score: 101000},
+		},
+		{
+			MatchupID: 2,
+			Week:      2,
+			TeamA:     &model.TeamResult{TeamID: m3.ExternalID, Score: 99100},
+			TeamB:     &model.TeamResult{TeamID: m4.ExternalID, Score: 103550},
+		},
+		{
+			MatchupID: 3,
+			Week:      2,
+			TeamA:     &model.TeamResult{TeamID: m1.ExternalID, Score: 100000},
+			TeamB:     &model.TeamResult{TeamID: m3.ExternalID, Score: 99100},
+		},
+		{
+			MatchupID: 4,
+			Week:      2,
+			TeamA:     &model.TeamResult{TeamID: m2.ExternalID, Score: 101000},
+			TeamB:     &model.TeamResult{TeamID: m4.ExternalID, Score: 103550},
+		},
+	}
+
+	if err := testDB.SaveResults(ctx, l.ID, matchups); err != nil {
+		t.Fatalf("error saving matchup results: %v", err)
+	}
+
+	matchups, err := testDB.GetResults(ctx, l.ID, 2)
+	if err != nil {
+		t.Fatalf("error getting matchup results: %v", err)
+	}
+	if len(matchups) != 4 {
+		t.Errorf("expected 4 matchups, but got: %d", len(matchups))
+	}
+
+	t1 := &model.TeamResult{TeamID: m1.ExternalID, TeamName: m1.TeamName, Score: 100000}
+	t2 := &model.TeamResult{TeamID: m2.ExternalID, TeamName: m2.TeamName, Score: 101000}
+	t3 := &model.TeamResult{TeamID: m3.ExternalID, TeamName: m3.TeamName, Score: 99100}
+	t4 := &model.TeamResult{TeamID: m4.ExternalID, TeamName: m4.TeamName, Score: 103550}
+
+	for i, m := range matchups {
+		switch i {
+		case 0:
+			if !reflect.DeepEqual(t1, m.TeamA) || !reflect.DeepEqual(t2, m.TeamB) {
+				t.Errorf("matchup 1 (id: %d) expected t1 and t2 got: %v, %v", m.MatchupID, m.TeamA, m.TeamB)
+			}
+		case 1:
+			if !reflect.DeepEqual(t3, m.TeamA) || !reflect.DeepEqual(t4, m.TeamB) {
+				t.Errorf("matchup 2 (id: %d) expected t3 and t4 got: %v, %v", m.MatchupID, m.TeamA, m.TeamB)
+			}
+		case 2:
+			if !reflect.DeepEqual(t1, m.TeamA) || !reflect.DeepEqual(t3, m.TeamB) {
+				t.Errorf("matchup 2 (id: %d) expected t1 and t3 got: %v, %v", m.MatchupID, m.TeamA, m.TeamB)
+			}
+		case 3:
+			if !reflect.DeepEqual(t2, m.TeamA) || !reflect.DeepEqual(t4, m.TeamB) {
+				t.Errorf("matchup 2 (id: %d) expected t2 and t4 got: %v, %v", m.MatchupID, m.TeamA, m.TeamB)
+			}
+		default:
+			t.Fatalf("unexpected matchup result: %d", i)
+		}
 	}
 }
 
@@ -569,6 +722,28 @@ func getPlayerWithName(first, last string) *model.Player {
 		LastName:  last,
 		Position:  model.POS_WR,
 		Team:      model.TEAM_DET,
+	}
+}
+
+func getLeague() *model.League {
+	id := atomic.AddInt32(&idCtr, 1)
+
+	return &model.League{
+		Platform:   model.PlatformSleeper,
+		ExternalID: fmt.Sprint(id),
+		Name:       fmt.Sprintf("League %d", id),
+		Year:       "2024",
+	}
+}
+
+func getLeagueManager() *model.LeagueManager {
+	id := atomic.AddInt32(&idCtr, 1)
+
+	return &model.LeagueManager{
+		ExternalID:  fmt.Sprint(id),
+		TeamName:    fmt.Sprintf("Team %d", id),
+		ManagerName: fmt.Sprintf("Manager Name %d", id),
+		JoinKey:     fmt.Sprint(id),
 	}
 }
 

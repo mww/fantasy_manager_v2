@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"slices"
 	"strconv"
@@ -28,6 +29,10 @@ type Client interface {
 
 	// Sort the managers in a stable and logical order.
 	SortManagers(m []model.LeagueManager)
+
+	// Get the matchup for a specific week for a league
+	// Also returns the individual scores for all the players.
+	GetMatchupResults(leagueID string, week int) ([]model.Matchup, []model.PlayerScore, error)
 }
 
 type client struct {
@@ -63,6 +68,10 @@ func (c *client) LoadPlayers() ([]model.Player, error) {
 	for _, p := range parsed {
 		pos := model.ParsePosition(p.Position)
 		if pos == model.POS_UNKNOWN || (p.FirstName == "Player" && p.LastName == "Invalid") {
+			continue
+		}
+		if p.ID == "" {
+			log.Printf("player without an ID set: %s %s", p.FirstName, p.LastName)
 			continue
 		}
 		result = append(result, *p.toPlayer())
@@ -174,6 +183,62 @@ func (c *client) SortManagers(m []model.LeagueManager) {
 		}
 		return ai - bi
 	})
+}
+
+func (c *client) GetMatchupResults(leagueID string, week int) ([]model.Matchup, []model.PlayerScore, error) {
+	var res []struct {
+		Points       float64            `json:"points"`
+		RosterID     int                `json:"roster_id"`
+		MatchupID    int32              `json:"matchup_id"`
+		PlayerPoints map[string]float64 `json:"players_points"`
+	}
+	if err := c.sleeperRequest(&res, "/v1/league/%s/matchups/%d", leagueID, week); err != nil {
+		return nil, nil, err
+	}
+
+	playerScores := make([]model.PlayerScore, 0, 128)
+	// map key is matchup_id which allows us to join the matches
+	matchMap := make(map[int32]*model.Matchup)
+	for _, r := range res {
+		tr := &model.TeamResult{
+			JoinKey: fmt.Sprint(r.RosterID),
+			Score:   int32(r.Points * 1000),
+		}
+		m := matchMap[r.MatchupID]
+		if m == nil {
+			// This is the first team we've found for the matchup
+			matchMap[r.MatchupID] = &model.Matchup{
+				TeamA:     tr,
+				MatchupID: r.MatchupID,
+				Week:      week,
+			}
+		} else {
+			// The first team in the matchup has already been added
+			m.TeamB = tr
+		}
+
+		for id, score := range r.PlayerPoints {
+			ps := model.PlayerScore{
+				PlayerID: id,
+				Score:    int32(score * 1000),
+				Week:     week,
+				// Not setting LeagueID because we only have the sleeper id here, not the system one.
+			}
+			playerScores = append(playerScores, ps)
+		}
+	}
+
+	matches := make([]model.Matchup, 0, len(matchMap))
+	for _, m := range matchMap {
+		if m.TeamA == nil || m.TeamB == nil {
+			return nil, nil, errors.New("at least one matchup is not complete with 2 teams")
+		}
+		matches = append(matches, *m)
+	}
+	slices.SortFunc(matches, func(a, b model.Matchup) int {
+		return int(a.MatchupID - b.MatchupID)
+	})
+	return matches, playerScores, nil
 }
 
 // Sends the request to sleeper and uses a JSON parser to read the result into res.

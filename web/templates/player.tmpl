@@ -1,16 +1,16 @@
 <div class="player-details">
-  <h1>{{ .FirstName }} {{ .LastName }}</h1>
-  {{ if .Nickname1 }}
-    <h2>"{{ .Nickname1 }}"</h2>
+  <h1>{{ .player.FirstName }} {{ .player.LastName }}</h1>
+  {{ if .player.Nickname1 }}
+    <h2>"{{ .player.Nickname1 }}"</h2>
     <div id="delete-nickname">
-      <form id="delete-nickname" method="post" action="/players/{{ .ID }}">
+      <form id="delete-nickname" method="post" action="/players/{{ .player.ID }}">
         <input type="hidden" name="update" value="nickname" />
         <input type="submit" value="Delete Nickname" />
       </form>
     </div>
   {{ else }}
     <div id="delete-nickname">
-      <form id="set-nickname" method="post" action="/players/{{ .ID }}">
+      <form id="set-nickname" method="post" action="/players/{{ .player.ID }}">
         <input type="hidden" name="update" value="nickname" />
         <input type="text" id="nickname" name="nickname" />
         <input type="submit" value="Set Nickname" />
@@ -18,52 +18,61 @@
     </div>
   {{ end }}
   <div>
-    {{ if .Team }}
-      <div>Team: {{ .Team.Friendly }}</div>
+    {{ if .player.Team }}
+      <div>Team: {{ .player.Team.Friendly }}</div>
     {{ end }}
-    {{ if .Position }}
-      <div>Position: {{ .Position }}</div>
+    {{ if .player.Position }}
+      <div>Position: {{ .player.Position }}</div>
     {{ end }}
-    {{ if gt .DepthChartOrder 0 }}
-      <div>Depth Chart Order: {{ .DepthChartOrder }}</div>
+    {{ if gt .player.DepthChartOrder 0 }}
+      <div>Depth Chart Order: {{ .player.DepthChartOrder }}</div>
     {{ end }}
-    {{ if gt .Jersey 0 }}
-      <div>Jersey Number: {{ .Jersey }}</div>
+    {{ if gt .player.Jersey 0 }}
+      <div>Jersey Number: {{ .player.Jersey }}</div>
     {{ end }}
-    {{ if gt .Weight 0 }}
-      <div>Weight: {{ .Weight }} pounds</div>
+    {{ if gt .player.Weight 0 }}
+      <div>Weight: {{ .player.Weight }} pounds</div>
     {{ end }}
-    {{ if gt .Height 0 }}
-      <div>Height: {{ .Height|height }}</div>
+    {{ if gt .player.Height 0 }}
+      <div>Height: {{ .player.Height|height }}</div>
     {{ end }}
-    {{ if .BirthDate }}
-      <div>Birthday: {{ .BirthDate|age }}</div>
+    {{ if .player.BirthDate }}
+      <div>Birthday: {{ .player.BirthDate|age }}</div>
     {{ end }}
-    {{ if .RookieYear }}
-      <div>Rookie Year: {{ .RookieYear|year }}</div>
+    {{ if .player.RookieYear }}
+      <div>Rookie Year: {{ .player.RookieYear|year }}</div>
     {{ end }}
-    {{ if gt .YearsExp 0 }}
-      <div>Years Experience: {{ .YearsExp }}</div>
+    {{ if gt .player.YearsExp 0 }}
+      <div>Years Experience: {{ .player.YearsExp }}</div>
     {{ end }}
-    {{ if .College }}
-      <div>College: {{ .College }}</div>
+    {{ if .player.College }}
+      <div>College: {{ .player.College }}</div>
     {{ end }}
-    {{ if .Active }}
+    {{ if .player.Active }}
       <div>Status: Active</div>
     {{ else }}
       <div>Status: Inactive</div>
     {{ end }}
 
-    {{ if .Changes }}
+    {{ if .scores }}
+      <div>Scores</div>
+      <ul>
+        {{ range $s := .scores }}
+          <li>{{ $s.LeagueID }} - Week: {{ $s.Week }}: {{ $s.Score|score }}</li>
+        {{ end }}
+      </ul>
+    {{ end }}
+
+    {{ if .player.Changes }}
       <div>Changes</div>
       <ul>
-        {{ range $c := .Changes }}
+        {{ range $c := .player.Changes }}
           <li>{{ $c.String }} on {{ $c.Time|date }}</li>
         {{ end }}
       </ul>
-      <div>Last updated: {{ .Updated|date }}</div>
+      <div>Last updated: {{ .player.Updated|date }}</div>
     {{ else }}
-      <div>Last updated: {{ .Created|date }}</div>
+      <div>Last updated: {{ .player.Created|date }}</div>
     {{ end }}
   </div>
 </div>
