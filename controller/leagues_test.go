@@ -236,11 +236,12 @@ func TestSyncResultsFromPlatform(t *testing.T) {
 			t.Errorf("score in league already verified, unexpected value: %v", s)
 			continue
 		}
-		expectedScore := model.PlayerScore{
-			PlayerID: "8154",
-			Score:    13100,
-			LeagueID: l.ID,
-			Week:     1,
+		expectedScore := model.SeasonScores{
+			LeagueID:   l.ID,
+			LeagueName: l.Name,
+			LeagueYear: l.Year,
+			PlayerID:   "8154",
+			Scores:     []int32{0, 13100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		}
 		if !reflect.DeepEqual(expectedScore, s) {
 			t.Errorf("player score not expected, got: %v", s)

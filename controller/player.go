@@ -66,7 +66,7 @@ func (c *controller) UpdatePlayers(ctx context.Context) error {
 	return nil
 }
 
-func (c *controller) GetPlayerScores(ctx context.Context, playerID string) ([]model.PlayerScore, error) {
+func (c *controller) GetPlayerScores(ctx context.Context, playerID string) ([]model.SeasonScores, error) {
 	return c.db.GetPlayerScores(ctx, playerID)
 }
 

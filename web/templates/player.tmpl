@@ -55,12 +55,55 @@
     {{ end }}
 
     {{ if .scores }}
-      <div>Scores</div>
-      <ul>
-        {{ range $s := .scores }}
-          <li>{{ $s.LeagueID }} - Week: {{ $s.Week }}: {{ $s.Score|score }}</li>
-        {{ end }}
-      </ul>
+      <h2>Scores</h2>
+
+      {{ range $s := .scores }}
+        <table class="playerScores">
+          <tr><td colspan="100%">{{ $s.LeagueName }} ({{ $s.LeagueYear }})</td></tr>
+          <tr>
+            <th>Week</th>
+            <th>1</th>
+            <th>2</th>
+            <th>3</th>
+            <th>4</th>
+            <th>5</th>
+            <th>6</th>
+            <th>7</th>
+            <th>8</th>
+            <th>9</th>
+            <th>10</th>
+            <th>11</th>
+            <th>12</th>
+            <th>13</th>
+            <th>14</th>
+            <th>15</th>
+            <th>16</th>
+            <th>17</th>
+            <th>18</th>
+          </tr>
+          <tr>
+            <td>Score</td>
+            <td>{{ index $s.Scores 1 | score }}</td>
+            <td>{{ index $s.Scores 2 | score }}</td>
+            <td>{{ index $s.Scores 3 | score }}</td>
+            <td>{{ index $s.Scores 4 | score }}</td>
+            <td>{{ index $s.Scores 5 | score }}</td>
+            <td>{{ index $s.Scores 6 | score }}</td>
+            <td>{{ index $s.Scores 7 | score }}</td>
+            <td>{{ index $s.Scores 8 | score }}</td>
+            <td>{{ index $s.Scores 9 | score }}</td>
+            <td>{{ index $s.Scores 10 | score }}</td>
+            <td>{{ index $s.Scores 11 | score }}</td>
+            <td>{{ index $s.Scores 12 | score }}</td>
+            <td>{{ index $s.Scores 13 | score }}</td>
+            <td>{{ index $s.Scores 14 | score }}</td>
+            <td>{{ index $s.Scores 15 | score }}</td>
+            <td>{{ index $s.Scores 16 | score }}</td>
+            <td>{{ index $s.Scores 17 | score }}</td>
+            <td>{{ index $s.Scores 18 | score }}</td>
+          </tr>
+        </table>
+      {{ end }}
     {{ end }}
 
     {{ if .player.Changes }}

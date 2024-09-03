@@ -74,6 +74,16 @@ func (c *Change) String() string {
 type PlayerScore struct {
 	PlayerID string
 	Score    int32
-	LeagueID int32
-	Week     int
+}
+
+// SeasonScores aggregates all the weekly scores for a player in a league. It
+// is to make displaying the data more natural. All of the scores are saved in
+// a slice. To make things easier Scores[0] is not used. Week 1 is at Scores[1],
+// Week 2 is at Scores[2], etc.
+type SeasonScores struct {
+	LeagueID   int32
+	LeagueName string
+	LeagueYear string
+	PlayerID   string
+	Scores     []int32
 }
