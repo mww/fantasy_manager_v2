@@ -244,18 +244,18 @@ func TestGetMatchupResults(t *testing.T) {
 		},
 	}
 	expectedScores := []model.PlayerScore{
-		{PlayerID: "1352", Score: 8700, Week: 1},
-		{PlayerID: "3225", Score: 2000, Week: 1},
-		{PlayerID: "4198", Score: -700, Week: 1},
-		{PlayerID: "4993", Score: 5130, Week: 1},
-		{PlayerID: "7601", Score: 6000, Week: 1},
-		{PlayerID: "8154", Score: 13100, Week: 1},
-		{PlayerID: "8408", Score: 0, Week: 1},
-		{PlayerID: "10219", Score: 700, Week: 1},
-		{PlayerID: "10222", Score: 5600, Week: 1},
-		{PlayerID: "10223", Score: 0, Week: 1},
-		{PlayerID: "11370", Score: 0, Week: 1},
-		{PlayerID: "11439", Score: -200, Week: 1},
+		{PlayerID: "1352", Score: 8700},
+		{PlayerID: "3225", Score: 2000},
+		{PlayerID: "4198", Score: -700},
+		{PlayerID: "4993", Score: 5130},
+		{PlayerID: "7601", Score: 6000},
+		{PlayerID: "8154", Score: 13100},
+		{PlayerID: "8408", Score: 0},
+		{PlayerID: "10219", Score: 700},
+		{PlayerID: "10222", Score: 5600},
+		{PlayerID: "10223", Score: 0},
+		{PlayerID: "11370", Score: 0},
+		{PlayerID: "11439", Score: -200},
 	}
 
 	matchups, scores, err := c.GetMatchupResults(testutils.ValidLeagueID, 1)

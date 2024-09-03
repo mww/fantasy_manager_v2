@@ -22,7 +22,7 @@ type C interface {
 	UpdatePlayerNickname(ctx context.Context, id, nickname string) error
 	UpdatePlayers(ctx context.Context) error
 	// Look up the scores for a specific player for all leagues and weeks.
-	GetPlayerScores(ctx context.Context, playerID string) ([]model.PlayerScore, error)
+	GetPlayerScores(ctx context.Context, playerID string) ([]model.SeasonScores, error)
 	RunPeriodicPlayerUpdates(frequency time.Duration, shutdown chan bool, wg *sync.WaitGroup)
 
 	// Add a new rankings for players. This will parse the data from the reader (in CSV format) and

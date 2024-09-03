@@ -221,8 +221,6 @@ func (c *client) GetMatchupResults(leagueID string, week int) ([]model.Matchup, 
 			ps := model.PlayerScore{
 				PlayerID: id,
 				Score:    int32(score * 1000),
-				Week:     week,
-				// Not setting LeagueID because we only have the sleeper id here, not the system one.
 			}
 			playerScores = append(playerScores, ps)
 		}

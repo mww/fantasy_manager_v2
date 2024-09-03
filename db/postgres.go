@@ -186,27 +186,50 @@ func (db *postgresDB) SavePlayerScores(ctx context.Context, leagueID int32, week
 	return nil
 }
 
-func (db *postgresDB) GetPlayerScores(ctx context.Context, playerID string) ([]model.PlayerScore, error) {
-	const query = `SELECT league_id, week, score FROM player_scores 
-			WHERE player_id = @playerID ORDER BY league_id, week`
+func (db *postgresDB) GetPlayerScores(ctx context.Context, playerID string) ([]model.SeasonScores, error) {
+	const query = `SELECT p.league_id, p.week, p.score, l.name, l.year FROM player_scores AS p
+            INNER JOIN leagues AS l ON p.league_id=l.id
+			WHERE p.player_id=@playerID ORDER BY p.league_id, p.week`
 
 	rows, err := db.pool.Query(ctx, query, pgx.NamedArgs{"playerID": playerID})
 	if err != nil {
 		return nil, fmt.Errorf("error querying player scores: %w", err)
 	}
 
-	results := make([]model.PlayerScore, 0, 32)
+	scoreMap := make(map[int32]*model.SeasonScores)
 	for rows.Next() {
-		var s model.PlayerScore
-		if err := rows.Scan(&s.LeagueID, &s.Week, &s.Score); err != nil {
+		var leagueID, score int32
+		var week int
+		var leagueName, leagueYear string
+		if err := rows.Scan(&leagueID, &week, &score, &leagueName, &leagueYear); err != nil {
 			return nil, fmt.Errorf("error scanning score: %w", err)
 		}
-		s.PlayerID = playerID
-		results = append(results, s)
+
+		if scores, found := scoreMap[leagueID]; found {
+			scores.Scores[week] = score
+		} else {
+			s := &model.SeasonScores{
+				LeagueID:   leagueID,
+				LeagueName: leagueName,
+				LeagueYear: leagueYear,
+				PlayerID:   playerID,
+				Scores:     make([]int32, 19),
+			}
+			s.Scores[week] = score
+			scoreMap[leagueID] = s
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error with rows: %w", err)
 	}
+
+	results := make([]model.SeasonScores, 0, len(scoreMap))
+	for _, s := range scoreMap {
+		results = append(results, *s)
+	}
+	slices.SortFunc(results, func(a, b model.SeasonScores) int {
+		return strings.Compare(a.LeagueYear, b.LeagueYear)
+	})
 
 	return results, nil
 }

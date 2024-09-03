@@ -413,6 +413,7 @@ func TestSaveAndGetPlayerScores(t *testing.T) {
 
 	l1 := getLeague()
 	l2 := getLeague()
+	l2.Year = "2023"
 	for _, l := range []*model.League{l1, l2} {
 		if err := testDB.AddLeague(ctx, l); err != nil {
 			t.Fatalf("error adding league: %v", err)
@@ -470,13 +471,23 @@ func TestSaveAndGetPlayerScores(t *testing.T) {
 		t.Fatalf("error fetching scores for p2: %v", err)
 	}
 
-	expectedScores := []model.PlayerScore{
-		{PlayerID: p2.ID, Score: 5100, LeagueID: l1.ID, Week: 1},
-		{PlayerID: p2.ID, Score: 20900, LeagueID: l1.ID, Week: 2},
-		{PlayerID: p2.ID, Score: 20500, LeagueID: l2.ID, Week: 1},
-		{PlayerID: p2.ID, Score: 16400, LeagueID: l2.ID, Week: 2},
+	expected := []model.SeasonScores{
+		{
+			LeagueID:   l2.ID,
+			LeagueName: l2.Name,
+			LeagueYear: l2.Year,
+			PlayerID:   p2.ID,
+			Scores:     []int32{0, 20500, 16400, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			LeagueID:   l1.ID,
+			LeagueName: l1.Name,
+			LeagueYear: l1.Year,
+			PlayerID:   p2.ID,
+			Scores:     []int32{0, 5100, 20900, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
 	}
-	if !reflect.DeepEqual(expectedScores, scores) {
+	if !reflect.DeepEqual(expected, scores) {
 		t.Errorf("player scores not as expected, got: %v", scores)
 	}
 }
