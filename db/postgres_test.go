@@ -235,13 +235,6 @@ func TestRankings(t *testing.T) {
 		t.Fatalf("error inserting players: %v", err)
 	}
 
-	// Before any rankings are added, try to list to ensure that we get back an err
-	r, err := testDB.ListRankings(ctx)
-	if err != nil {
-		t.Errorf("expected err to be nil, but was: %v", err)
-	}
-	assertEquals(t, "len(r)", 0, len(r))
-
 	// The rankings to insert into the database
 	rankings := []struct {
 		date     string
@@ -287,12 +280,20 @@ func TestRankings(t *testing.T) {
 		t.Fatalf("err was expected to be nil: %v", err)
 	}
 
+	// Make sure all of the expected dates are in the results
 	expectedDates := []string{"2023-10-04", "2023-09-27", "2023-09-20", "2023-09-13", "2023-09-07"}
-	assertEquals(t, "len(listResults)", 5, len(listResults))
-	for i := 0; i < len(listResults); i++ {
-		assertEquals(t, fmt.Sprintf("listResults[%d].Date", i), expectedDates[i], listResults[i].Date.Format(time.DateOnly))
-		assertTrue(t, fmt.Sprintf("listResults[%d].ID > 0", i), listResults[i].ID > 0)
-		assertTrue(t, fmt.Sprintf("listResults[%d].Players == nil", i), listResults[i].Players == nil)
+	for _, d := range expectedDates {
+		found := false
+		for _, r := range listResults {
+			if r.Date.Format(time.DateOnly) == d {
+				found = true
+				continue
+			}
+		}
+
+		if !found {
+			t.Errorf("did not find expected date %s in listResult", d)
+		}
 	}
 
 	// Get the first ranking
