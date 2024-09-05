@@ -1,0 +1,45 @@
+<h1>{{ .league.Name }} ({{ .league.Year }}</h1>
+
+<div>Week: {{ .power.Week }}</div>
+<div><a href="/players/rankings/{{ .power.RankingID }}">Player Rankings Used</a></div>
+
+<table>
+    <tr>
+        <th>Rank</th>
+        <th>Team</th>
+        <th>Score</th>
+    </tr>
+    {{ range $t := .power.Teams }}
+        <tr>
+            <td>{{ $t.Rank }}</td>
+            <td>{{ $t.TeamName }}</td>
+            <td>{{ $t.TotalScore }}</td>
+        </tr>
+    {{ end }}
+</table>
+
+{{ range $t := .power.Teams }}
+<div>
+    <h3>{{ $t.TeamName }}</h3>
+    <table>
+        <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Position</th>
+            <th>Team</th>
+            <th>Points</th>
+            <th>Starter</th>
+        </tr>
+        {{ range $p := $t.Roster }}
+            <tr>
+                <td>{{ $p.Rank }}</td>
+                <td><a href="/players/{{ $p.PlayerID }}">{{ $p.FirstName }} {{ $p.LastName }}</a></td>
+                <td>{{ $p.Position }}</td>
+                <td>{{ $p.NFLTeam }}</td>
+                <td>{{ $p.PowerRankingPoints }}</td>
+                <td>{{ $p.IsStarter }}</td>
+            </tr>
+        {{ end }}
+    </table>
+</div>
+{{ end }}

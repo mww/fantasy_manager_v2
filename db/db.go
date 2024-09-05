@@ -34,4 +34,7 @@ type DB interface {
 
 	SaveResults(ctx context.Context, leagueID int32, matchups []model.Matchup) error
 	GetResults(ctx context.Context, leagueID int32, week int) ([]model.Matchup, error)
+
+	SavePowerRanking(ctx context.Context, leagueID int32, pr *model.PowerRanking) (int32, error)
+	GetPowerRanking(ctx context.Context, leagueID, powerRankingID int32) (*model.PowerRanking, error)
 }

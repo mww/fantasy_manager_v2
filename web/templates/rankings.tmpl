@@ -1,10 +1,10 @@
 <h1>Rankings</h1>
 
-<h3>{{ .Date | date }}</h3>
+<h3>{{ .date | date }}</h3>
 
 <table>
     <tr><th>Rank</th><th>Name</th><th>Position</th><th>Team</th></tr>
-    {{ range $p := .Players }}
+    {{ range $p := .players }}
         <tr>
             <td>{{ $p.Rank }}</td>
             <td><a href="/players/{{ $p.ID }}">{{ $p.FirstName }} {{ $p.LastName }}</a></td>

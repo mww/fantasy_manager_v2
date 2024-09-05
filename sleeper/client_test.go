@@ -281,3 +281,73 @@ func TestGetMatchupResults(t *testing.T) {
 		t.Errorf("player scores were not the expected ones, got: %v", scores)
 	}
 }
+
+func TestGetRosters(t *testing.T) {
+	fakeSleeper := testutils.NewFakeSleeperServer()
+	defer fakeSleeper.Close()
+	c := NewForTest(fakeSleeper.URL())
+
+	e1 := model.Roster{
+		TeamID:    "300638784440004608",
+		PlayerIDs: []string{"10226", "10231", "11435", "1166", "1339", "4080"},
+	}
+	e2 := model.Roster{
+		TeamID:    "362744067425296384",
+		PlayerIDs: []string{"10871", "1234", "1476", "2078", "2251", "2374"},
+	}
+	e3 := model.Roster{
+		TeamID:    "300368913101774848",
+		PlayerIDs: []string{"10219", "10222", "10225", "10444", "1992", "3214"},
+	}
+	e4 := model.Roster{
+		TeamID:    "325106323354046464",
+		PlayerIDs: []string{"11439", "1352", "1466", "2216", "2359", "2449"},
+	}
+
+	rosters, err := c.GetRosters(testutils.ValidLeagueID)
+	if err != nil {
+		t.Errorf("unexpected error loading rosters: %v", err)
+	}
+	if len(rosters) != 4 {
+		t.Errorf("expected 4 rosters, but got %d instead", len(rosters))
+	}
+	if !reflect.DeepEqual(e1, rosters[0]) {
+		t.Errorf("unexpected value for rosters[0], got: %v", rosters[0])
+	}
+	if !reflect.DeepEqual(e2, rosters[1]) {
+		t.Errorf("unexpected value for rosters[1], got: %v", rosters[1])
+	}
+	if !reflect.DeepEqual(e3, rosters[2]) {
+		t.Errorf("unexpected value for rosters[2], got: %v", rosters[2])
+	}
+	if !reflect.DeepEqual(e4, rosters[3]) {
+		t.Errorf("unexpected value for rosters[3], got: %v", rosters[3])
+	}
+}
+
+func TestGetStarters(t *testing.T) {
+	fakeSleeper := testutils.NewFakeSleeperServer()
+	defer fakeSleeper.Close()
+	c := NewForTest(fakeSleeper.URL())
+
+	starters, err := c.GetStarters(testutils.ValidLeagueID)
+	if err != nil {
+		t.Errorf("unexpected error returned: %v", err)
+	}
+
+	expected := []model.RosterSpot{
+		model.GetRosterSpot("QB"),
+		model.GetRosterSpot("RB"),
+		model.GetRosterSpot("RB"),
+		model.GetRosterSpot("WR"),
+		model.GetRosterSpot("WR"),
+		model.GetRosterSpot("TE"),
+		model.GetRosterSpot("FLEX"),
+		model.GetRosterSpot("FLEX"),
+		model.GetRosterSpot("FLEX"),
+	}
+
+	if !reflect.DeepEqual(expected, starters) {
+		t.Errorf("starters do not match expected, got: %v", starters)
+	}
+}

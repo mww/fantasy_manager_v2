@@ -301,12 +301,12 @@ func TestRankings(t *testing.T) {
 		t.Fatalf("error getting ranking by id: %v", err)
 	}
 	assertEquals(t, "getResult.Date", "2023-10-04", getResult.Date.Format(time.DateOnly))
-	expectedRankings := []model.RankingPlayer{
-		{Rank: 1, ID: p5.ID, FirstName: p5.FirstName, LastName: p5.LastName, Position: p5.Position, Team: p5.Team},
-		{Rank: 2, ID: p4.ID, FirstName: p4.FirstName, LastName: p4.LastName, Position: p4.Position, Team: p4.Team},
-		{Rank: 3, ID: p3.ID, FirstName: p3.FirstName, LastName: p3.LastName, Position: p3.Position, Team: p3.Team},
-		{Rank: 4, ID: p2.ID, FirstName: p2.FirstName, LastName: p2.LastName, Position: p2.Position, Team: p2.Team},
-		{Rank: 5, ID: p1.ID, FirstName: p1.FirstName, LastName: p1.LastName, Position: p1.Position, Team: p1.Team},
+	expectedRankings := map[string]model.RankingPlayer{
+		p5.ID: {Rank: 1, ID: p5.ID, FirstName: p5.FirstName, LastName: p5.LastName, Position: p5.Position, Team: p5.Team},
+		p4.ID: {Rank: 2, ID: p4.ID, FirstName: p4.FirstName, LastName: p4.LastName, Position: p4.Position, Team: p4.Team},
+		p3.ID: {Rank: 3, ID: p3.ID, FirstName: p3.FirstName, LastName: p3.LastName, Position: p3.Position, Team: p3.Team},
+		p2.ID: {Rank: 4, ID: p2.ID, FirstName: p2.FirstName, LastName: p2.LastName, Position: p2.Position, Team: p2.Team},
+		p1.ID: {Rank: 5, ID: p1.ID, FirstName: p1.FirstName, LastName: p1.LastName, Position: p1.Position, Team: p1.Team},
 	}
 	assertTrue(t, "expectedRanking == getResult.Players", reflect.DeepEqual(expectedRankings, getResult.Players))
 
@@ -698,6 +698,131 @@ func TestSaveAndGetResults(t *testing.T) {
 		default:
 			t.Fatalf("unexpected matchup result: %d", i)
 		}
+	}
+}
+
+func TestGetAndCreatePowerRanking(t *testing.T) {
+	ctx := context.Background()
+	// A league
+	l := getLeague()
+	if err := testDB.AddLeague(ctx, l); err != nil {
+		t.Fatalf("error adding league: %v", err)
+	}
+	defer func() {
+		testDB.ArchiveLeague(ctx, l.ID) // Clean up after the test
+	}()
+
+	// And managers
+	m1 := getLeagueManager()
+	m2 := getLeagueManager()
+	for _, m := range []*model.LeagueManager{m1, m2} {
+		if err := testDB.SaveLeagueManager(ctx, l.ID, m); err != nil {
+			t.Fatalf("error adding manager to league: %v", err)
+		}
+	}
+
+	// And players
+	p1 := getPlayer()
+	p2 := getPlayer()
+	p3 := getPlayer()
+	p4 := getPlayer()
+	for _, p := range []*model.Player{p1, p2, p3, p4} {
+		if err := testDB.SavePlayer(ctx, p); err != nil {
+			t.Fatalf("error adding player: %v", err)
+		}
+	}
+
+	playerRanks := map[string]int32{
+		p1.ID: 1,
+		p2.ID: 2,
+		p3.ID: 3,
+		p4.ID: 4,
+	}
+	ranking, err := testDB.AddRanking(ctx, time.Now(), playerRanks)
+	if err != nil {
+		t.Fatalf("error adding ranking: %v", err)
+	}
+
+	pr := &model.PowerRanking{
+		RankingID: ranking.ID,
+		Week:      0,
+		Teams: []model.TeamPowerRanking{
+			{
+				TeamID:      m1.ExternalID,
+				Rank:        1,
+				TotalScore:  10111,
+				RosterScore: 10111,
+				Roster: []model.PowerRankingPlayer{
+					{
+						PlayerID:           p1.ID,
+						Rank:               1,
+						NFLTeam:            model.TEAM_ARI,
+						PowerRankingPoints: 1000,
+						IsStarter:          true,
+					},
+					{
+						PlayerID:           p2.ID,
+						Rank:               2,
+						NFLTeam:            model.TEAM_BUF,
+						PowerRankingPoints: 999,
+						IsStarter:          false,
+					},
+				},
+			},
+			{
+				TeamID:      m2.ExternalID,
+				Rank:        2,
+				TotalScore:  10022,
+				RosterScore: 10022,
+				Roster: []model.PowerRankingPlayer{
+					{
+						PlayerID:           p3.ID,
+						Rank:               3,
+						NFLTeam:            model.TEAM_CAR,
+						PowerRankingPoints: 888,
+						IsStarter:          true,
+					},
+					{
+						PlayerID:           p4.ID,
+						Rank:               4,
+						NFLTeam:            model.TEAM_DAL,
+						PowerRankingPoints: 777,
+						IsStarter:          false,
+					},
+				},
+			},
+		},
+	}
+	id, err := testDB.SavePowerRanking(ctx, l.ID, pr)
+	if err != nil {
+		t.Fatalf("error saving power ranking: %v", err)
+	}
+
+	res, err := testDB.GetPowerRanking(ctx, l.ID, id)
+	if err != nil {
+		t.Fatalf("error looking up power ranking: %v", err)
+	}
+
+	if len(res.Teams) != 2 {
+		t.Errorf("unexpected number of teams, wanted 2 got %d", len(res.Teams))
+	}
+	if res.Teams[0].Rank != 1 {
+		t.Errorf("Team 0 should have rank 1, not %d", res.Teams[0].Rank)
+	}
+	if res.Teams[0].TeamID != m1.ExternalID {
+		t.Errorf("Unexpected team at top of rankings: %s", res.Teams[0].TeamID)
+	}
+	if res.Teams[0].Roster[0].PlayerID != p1.ID {
+		t.Errorf("Unexpected player at top of roster for team 0 - wanted %s, got %s", p1.ID, res.Teams[0].Roster[0].PlayerID)
+	}
+	if res.Teams[1].Rank != 2 {
+		t.Errorf("Team 1 should have rank 2, not %d", res.Teams[1].Rank)
+	}
+	if res.Teams[1].TeamID != m2.ExternalID {
+		t.Errorf("Unexpected team at top of rankings: %s", res.Teams[1].TeamID)
+	}
+	if res.Teams[1].Roster[0].PlayerID != p3.ID {
+		t.Errorf("Unexpected player at top of roster for team 1 - got %s, got %s", p3.ID, res.Teams[1].Roster[0].PlayerID)
 	}
 }
 

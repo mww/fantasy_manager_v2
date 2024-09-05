@@ -33,6 +33,13 @@ type Client interface {
 	// Get the matchup for a specific week for a league
 	// Also returns the individual scores for all the players.
 	GetMatchupResults(leagueID string, week int) ([]model.Matchup, []model.PlayerScore, error)
+
+	// Load the rosters for all users.
+	GetRosters(leagueID string) ([]model.Roster, error)
+
+	// Get a list of all the positions a user needs to start in the league.
+	// This is used to select a starting lineup in the power rankings.
+	GetStarters(leagueID string) ([]model.RosterSpot, error)
 }
 
 type client struct {
@@ -121,7 +128,6 @@ func (c *client) GetLeaguesForUser(userID, year string) ([]model.League, error) 
 }
 
 func (c *client) GetLeagueManagers(leagueID string) ([]model.LeagueManager, error) {
-	// TODO - call rosters first, then get the owners, that way we can more easily ignore co-owners
 	var rosters []struct {
 		OwnerID  string `json:"owner_id"`
 		RosterID int    `json:"roster_id"`
@@ -237,6 +243,44 @@ func (c *client) GetMatchupResults(leagueID string, week int) ([]model.Matchup, 
 		return int(a.MatchupID - b.MatchupID)
 	})
 	return matches, playerScores, nil
+}
+
+func (c *client) GetRosters(leagueID string) ([]model.Roster, error) {
+	var rosters []struct {
+		OwnerID string   `json:"owner_id"`
+		Players []string `json:"players"`
+	}
+	if err := c.sleeperRequest(&rosters, "/v1/league/%s/rosters", leagueID); err != nil {
+		return nil, err
+	}
+
+	results := make([]model.Roster, 0, len(rosters))
+	for _, r := range rosters {
+		roster := model.Roster{
+			TeamID:    r.OwnerID,
+			PlayerIDs: r.Players,
+		}
+		results = append(results, roster)
+	}
+	return results, nil
+}
+
+func (c *client) GetStarters(leagueID string) ([]model.RosterSpot, error) {
+	var league struct {
+		RosterPositions []string `json:"roster_positions"`
+	}
+	if err := c.sleeperRequest(&league, "/v1/league/%s", leagueID); err != nil {
+		return nil, err
+	}
+
+	response := make([]model.RosterSpot, 0, 10)
+	for _, p := range league.RosterPositions {
+		if p == "BN" {
+			break
+		}
+		response = append(response, model.GetRosterSpot(p))
+	}
+	return response, nil
 }
 
 // Sends the request to sleeper and uses a JSON parser to read the result into res.

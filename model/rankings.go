@@ -5,9 +5,10 @@ import (
 )
 
 type Ranking struct {
-	ID      int32
-	Date    time.Time
-	Players []RankingPlayer
+	ID   int32
+	Date time.Time
+	// Map of players indexed by player id
+	Players map[string]RankingPlayer
 }
 
 type RankingPlayer struct {

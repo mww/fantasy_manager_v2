@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -82,6 +83,10 @@ func (c *controller) getPlayerRankingMap(ctx context.Context, r io.Reader) (map[
 		}
 
 		if len(matches) != 1 {
+			if line.rank > 500 {
+				log.Printf("no match found for %v with rank %d, skipping", line, line.rank)
+				continue
+			}
 			return nil, fmt.Errorf("did not find only a single player for %v, got %d", line, len(matches))
 		}
 

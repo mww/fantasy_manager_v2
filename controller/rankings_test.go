@@ -97,13 +97,13 @@ func TestRankings(t *testing.T) {
 		t.Fatalf("rankings date is not expected: %s", res1.Date.Format(time.DateOnly))
 	}
 
-	expectedRankings := []model.RankingPlayer{
-		{Rank: 1, ID: testutils.IDJefferson, FirstName: "Justin", LastName: "Jefferson", Position: model.POS_WR, Team: model.TEAM_MIN},
-		{Rank: 2, ID: testutils.IDMcCaffrey, FirstName: "Christian", LastName: "McCaffrey", Position: model.POS_RB, Team: model.TEAM_SFO},
-		{Rank: 3, ID: testutils.IDChase, FirstName: "Ja'Marr", LastName: "Chase", Position: model.POS_WR, Team: model.TEAM_CIN},
-		{Rank: 4, ID: testutils.IDChubb, FirstName: "Nick", LastName: "Chubb", Position: model.POS_RB, Team: model.TEAM_CLE},
-		{Rank: 6, ID: testutils.IDKelce, FirstName: "Travis", LastName: "Kelce", Position: model.POS_TE, Team: model.TEAM_KCC},
-		{Rank: 7, ID: testutils.IDHill, FirstName: "Tyreek", LastName: "Hill", Position: model.POS_WR, Team: model.TEAM_MIA},
+	expectedRankings := map[string]model.RankingPlayer{
+		testutils.IDJefferson: {Rank: 1, ID: testutils.IDJefferson, FirstName: "Justin", LastName: "Jefferson", Position: model.POS_WR, Team: model.TEAM_MIN},
+		testutils.IDMcCaffrey: {Rank: 2, ID: testutils.IDMcCaffrey, FirstName: "Christian", LastName: "McCaffrey", Position: model.POS_RB, Team: model.TEAM_SFO},
+		testutils.IDChase:     {Rank: 3, ID: testutils.IDChase, FirstName: "Ja'Marr", LastName: "Chase", Position: model.POS_WR, Team: model.TEAM_CIN},
+		testutils.IDChubb:     {Rank: 4, ID: testutils.IDChubb, FirstName: "Nick", LastName: "Chubb", Position: model.POS_RB, Team: model.TEAM_CLE},
+		testutils.IDKelce:     {Rank: 6, ID: testutils.IDKelce, FirstName: "Travis", LastName: "Kelce", Position: model.POS_TE, Team: model.TEAM_KCC},
+		testutils.IDHill:      {Rank: 7, ID: testutils.IDHill, FirstName: "Tyreek", LastName: "Hill", Position: model.POS_WR, Team: model.TEAM_MIA},
 	}
 	if !reflect.DeepEqual(res1.Players, expectedRankings) {
 		t.Fatalf("rankings differ from expected - actual: %v", res1.Players)
