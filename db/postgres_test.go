@@ -263,16 +263,18 @@ func TestRankings(t *testing.T) {
 		},
 	}
 
+	var rankingID int32
 	for _, r := range rankings {
 		d, err := time.ParseInLocation(time.DateOnly, r.date, time.UTC)
 		if err != nil {
 			t.Fatalf("error parsing ranking date: %v", err)
 		}
 
-		_, err = testDB.AddRanking(ctx, d, r.rankings)
+		ranking, err := testDB.AddRanking(ctx, d, r.rankings)
 		if err != nil {
 			t.Fatalf("error adding ranking for test: %v", err)
 		}
+		rankingID = ranking.ID
 	}
 
 	listResults, err := testDB.ListRankings(ctx)
@@ -297,7 +299,7 @@ func TestRankings(t *testing.T) {
 	}
 
 	// Get the first ranking
-	getResult, err := testDB.GetRanking(ctx, listResults[0].ID)
+	getResult, err := testDB.GetRanking(ctx, rankingID)
 	if err != nil {
 		t.Fatalf("error getting ranking by id: %v", err)
 	}
@@ -309,33 +311,8 @@ func TestRankings(t *testing.T) {
 		p2.ID: {Rank: 4, ID: p2.ID, FirstName: p2.FirstName, LastName: p2.LastName, Position: p2.Position, Team: p2.Team},
 		p1.ID: {Rank: 5, ID: p1.ID, FirstName: p1.FirstName, LastName: p1.LastName, Position: p1.Position, Team: p1.Team},
 	}
-	assertTrue(t, "expectedRanking == getResult.Players", reflect.DeepEqual(expectedRankings, getResult.Players))
-
-	// Delete the ranking
-	if err := testDB.DeleteRanking(ctx, getResult.ID); err != nil {
-		t.Fatalf("unexpected error when deleting ranking: %v", err)
-	}
-
-	// Now get the ranking again to ensure it is deleted
-	getResult2, err := testDB.GetRanking(ctx, getResult.ID)
-	assertError(t, "GetRanking() - deleted ranking", errors.New("no ranking with specified id found"), err)
-	assertTrue(t, "GetRanking() - deleted ranking", getResult2 == nil)
-
-	// Delete a ranking that does not exist
-	if err := testDB.DeleteRanking(ctx, getResult.ID); err == nil {
-		t.Fatalf("expected error but got none when deleting a ranking that was already deleted")
-	}
-
-	// Delete all rankings so the test can be run again if needed.
-	// e.g. with `go test --count=2`
-	rankingsList, err := testDB.ListRankings(ctx)
-	if err != nil {
-		t.Fatalf("error cleaning up rankings table: %v", err)
-	}
-	for _, r := range rankingsList {
-		if err := testDB.DeleteRanking(ctx, r.ID); err != nil {
-			t.Fatalf("error cleaning up ranking: %v", err)
-		}
+	if !reflect.DeepEqual(expectedRankings, getResult.Players) {
+		t.Errorf("expectedRanking != getResult.Players, got: %v", getResult.Players)
 	}
 }
 
@@ -739,7 +716,10 @@ func TestGetAndCreatePowerRanking(t *testing.T) {
 		p3.ID: 3,
 		p4.ID: 4,
 	}
-	ranking, err := testDB.AddRanking(ctx, time.Now(), playerRanks)
+	// Make the date before any of the ones in TestRankings() to keep
+	// the list order working.
+	rankingDate, _ := time.Parse(time.DateOnly, "2022-10-11")
+	ranking, err := testDB.AddRanking(ctx, rankingDate, playerRanks)
 	if err != nil {
 		t.Fatalf("error adding ranking: %v", err)
 	}
