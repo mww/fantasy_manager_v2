@@ -876,12 +876,6 @@ func assertEquals(t *testing.T, field string, expected, actual any) {
 	}
 }
 
-func assertTrue(t *testing.T, field string, cond bool) {
-	if !cond {
-		t.Errorf("%s - expected to be true but it was false", field)
-	}
-}
-
 func assertError(t *testing.T, tcName string, e1, e2 error) {
 	if e1 == nil && e2 == nil {
 		return
