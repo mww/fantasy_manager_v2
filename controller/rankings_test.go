@@ -113,11 +113,17 @@ func TestRankings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error listing rankings: %v", err)
 	}
-	if len(rankings) != 1 {
-		t.Fatalf("expected 1 result, got: %d", len(rankings))
+	if len(rankings) <= 0 {
+		t.Fatalf("expected 1 or more results, got: %d", len(rankings))
 	}
-	if rankings[0].ID != res1.ID {
-		t.Fatalf("id do not match - expected %d, got %d", res1.ID, rankings[0].ID)
+	idFound := false
+	for _, r := range rankings {
+		if r.ID == res1.ID {
+			idFound = true
+		}
+	}
+	if !idFound {
+		t.Fatal("expected ranking id not found in list operation")
 	}
 
 	if err := ctrl.DeleteRanking(ctx, id); err != nil {

@@ -38,6 +38,7 @@ type C interface {
 	AddLeagueManagers(ctx context.Context, leagueID int32) (*model.League, error) // Will also update the list
 	GetLeague(ctx context.Context, id int32) (*model.League, error)
 	ListLeagues(ctx context.Context) ([]model.League, error)
+	ArchiveLeague(ctx context.Context, id int32) error
 	SyncResultsFromPlatform(ctx context.Context, leagueID int32, week int) error
 	GetLeagueResults(ctx context.Context, leagueID int32, week int) ([]model.Matchup, error)
 

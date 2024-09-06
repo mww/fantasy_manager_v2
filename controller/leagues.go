@@ -92,6 +92,10 @@ func (c *controller) ListLeagues(ctx context.Context) ([]model.League, error) {
 	return c.db.ListLeagues(ctx)
 }
 
+func (c *controller) ArchiveLeague(ctx context.Context, id int32) error {
+	return c.db.ArchiveLeague(ctx, id)
+}
+
 func (c *controller) SyncResultsFromPlatform(ctx context.Context, leagueID int32, week int) error {
 	l, err := c.db.GetLeague(ctx, leagueID)
 	if err != nil {
