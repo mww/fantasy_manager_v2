@@ -24,6 +24,7 @@ func TestGetPlayerRankingMap(t *testing.T) {
 			testutils.IDMcCaffrey: 2,
 			testutils.IDChase:     3,
 			testutils.IDChubb:     4,
+			testutils.IDTucker:    5,
 			testutils.IDKelce:     6,
 			testutils.IDHill:      7,
 		}},
@@ -76,6 +77,9 @@ func TestRankings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error constructing controller: %v", err)
 	}
+	if err := ctrl.UpdatePlayers(ctx); err != nil {
+		t.Fatalf("error getting players: %v", err)
+	}
 
 	// Add a ranking
 	date, _ := time.ParseInLocation(time.DateOnly, "2023-09-07", time.UTC)
@@ -102,11 +106,21 @@ func TestRankings(t *testing.T) {
 		testutils.IDMcCaffrey: {Rank: 2, ID: testutils.IDMcCaffrey, FirstName: "Christian", LastName: "McCaffrey", Position: model.POS_RB, Team: model.TEAM_SFO},
 		testutils.IDChase:     {Rank: 3, ID: testutils.IDChase, FirstName: "Ja'Marr", LastName: "Chase", Position: model.POS_WR, Team: model.TEAM_CIN},
 		testutils.IDChubb:     {Rank: 4, ID: testutils.IDChubb, FirstName: "Nick", LastName: "Chubb", Position: model.POS_RB, Team: model.TEAM_CLE},
+		testutils.IDTucker:    {Rank: 5, ID: testutils.IDTucker, FirstName: "Justin", LastName: "Tucker", Position: model.POS_K, Team: model.TEAM_BAL},
 		testutils.IDKelce:     {Rank: 6, ID: testutils.IDKelce, FirstName: "Travis", LastName: "Kelce", Position: model.POS_TE, Team: model.TEAM_KCC},
 		testutils.IDHill:      {Rank: 7, ID: testutils.IDHill, FirstName: "Tyreek", LastName: "Hill", Position: model.POS_WR, Team: model.TEAM_MIA},
 	}
-	if !reflect.DeepEqual(res1.Players, expectedRankings) {
-		t.Fatalf("rankings differ from expected - actual: %v", res1.Players)
+	if len(expectedRankings) != len(res1.Players) {
+		t.Errorf("wrong number of players, expected %d, got %d", len(expectedRankings), len(res1.Players))
+	}
+	for id, e := range expectedRankings {
+		a, ok := res1.Players[id]
+		if !ok {
+			t.Errorf("no player with id %s found in actual rankings", id)
+		}
+		if !reflect.DeepEqual(e, a) {
+			t.Errorf("expected: %v, got %v", e, a)
+		}
 	}
 
 	rankings, err := ctrl.ListRankings(ctx)
@@ -155,6 +169,28 @@ func TestTrimNameSuffix(t *testing.T) {
 			a := trimNameSuffix(tc.input)
 			if a != tc.expected {
 				t.Errorf("expected: '%s', got '%s'", tc.expected, a)
+			}
+		})
+	}
+}
+
+func TestGetPosition(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected model.Position
+	}{
+		{input: "WR1", expected: model.POS_WR},
+		{input: "RB17", expected: model.POS_RB},
+		{input: "TE10", expected: model.POS_TE},
+		{input: "QB2", expected: model.POS_QB},
+		{input: "K1", expected: model.POS_K},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			a := getPosition(tc.input)
+			if a != tc.expected {
+				t.Errorf("expected '%s', got '%s'", tc.expected, a)
 			}
 		})
 	}

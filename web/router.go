@@ -28,8 +28,8 @@ func getRouter(ctrl controller.C, render *render.Render) *chi.Mux {
 		// Show either the search page if the q parameter is not present, or perform
 		// the search if it is.
 		r.Get("/", playerSearchHandler(ctrl, render))
-		r.Get("/{playerID:\\d+}", getPlayerHandler(ctrl, render))
-		r.Post("/{playerID:\\d+}", updatePlayerHandler(ctrl, render))
+		r.Get("/{playerID:\\w+}", getPlayerHandler(ctrl, render))
+		r.Post("/{playerID:\\w+}", updatePlayerHandler(ctrl, render))
 
 		r.Route("/rankings", func(r chi.Router) {
 			r.Get("/", rankingsRootHandler(ctrl, render))

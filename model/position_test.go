@@ -16,8 +16,10 @@ func TestParsePosition(t *testing.T) {
 		{input: "TE", expected: POS_TE},
 		{input: "te", expected: POS_TE},
 		{input: "UNKNOWN", expected: POS_UNKNOWN},
-		{input: "DEF", expected: POS_UNKNOWN},
+		{input: "DEF", expected: POS_DEF},
 		{input: "FB", expected: POS_RB},
+		{input: "def", expected: POS_DEF},
+		{input: "k", expected: POS_K},
 	}
 
 	for _, tc := range tests {

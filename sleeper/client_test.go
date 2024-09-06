@@ -3,7 +3,6 @@ package sleeper
 import (
 	_ "embed"
 	"errors"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -22,6 +21,19 @@ func TestLoadPlayers_success(t *testing.T) {
 	c := NewForTest(fakeSleeper.URL())
 
 	expected := map[string]model.Player{
+		"SEA": {
+			FirstName: "Seattle",
+			LastName:  "Seahawks",
+			Position:  model.POS_DEF,
+			Team:      model.TEAM_SEA,
+		},
+		"1264": {
+			FirstName: "Justin",
+			LastName:  "Tucker",
+			YahooID:   "26534",
+			Position:  model.POS_K,
+			Team:      model.TEAM_BAL,
+		},
 		"2374": {
 			FirstName: "Tyler",
 			LastName:  "Lockett",
@@ -72,7 +84,6 @@ func TestLoadPlayers_success(t *testing.T) {
 	// needed, but at the very least we should have the expected ones.
 	playerMap := make(map[string]*model.Player)
 	for _, p := range players {
-		log.Printf("%s - %s %s", p.ID, p.FirstName, p.LastName)
 		playerMap[p.ID] = &p
 	}
 

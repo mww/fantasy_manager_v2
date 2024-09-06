@@ -359,7 +359,6 @@ func createPowerRankingsHandler(ctrl controller.C, render *render.Render) http.H
 
 func showPowerRankingHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("in showPowerRankingHandler")
 		leagueID, err := getID(r, "leagueID")
 		if err != nil {
 			render.HTML(w, http.StatusBadRequest, "400", err)
