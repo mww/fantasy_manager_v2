@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS players (
     created           timestamp with time zone DEFAULT (now() at time zone 'utc'),
     updated           timestamp with time zone,
     fts_player        tsvector GENERATED ALWAYS AS (to_tsvector(
-        'english', name_first || ' ' || name_last || coalesce(nickname1, '')
+        'english', name_first || ' ' || name_last || ' ' || coalesce(nickname1, '')
     )) STORED
 );
 
