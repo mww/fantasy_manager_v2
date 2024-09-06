@@ -12,6 +12,8 @@ const (
 	POS_RB      Position = "RB"
 	POS_WR      Position = "WR"
 	POS_TE      Position = "TE"
+	POS_DEF     Position = "DEF"
+	POS_K       Position = "K"
 )
 
 func ParsePosition(pos string) Position {
@@ -27,6 +29,10 @@ func ParsePosition(pos string) Position {
 		return POS_WR
 	case "te":
 		return POS_TE
+	case "def":
+		return POS_DEF
+	case "k":
+		return POS_K
 	default:
 		return POS_UNKNOWN
 	}

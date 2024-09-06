@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -176,11 +177,7 @@ func (fp *fantasyprosCSVReader) readLine() (*csvLine, error) {
 		return nil, fmt.Errorf("bad team name for %s", line.name)
 	}
 
-	// When parsing the position only use the first 2 characters. This is because
-	// fantasypros lists the position like 'WR12' for the wide receiver 12.
-	// If we ever add kickers then this will need to be updated because kickers
-	// are listed as K1, K2, etc.
-	line.pos = model.ParsePosition(record[fp.posIdx][:2])
+	line.pos = getPosition(record[fp.posIdx])
 	if line.pos == model.POS_UNKNOWN {
 		return nil, errUnusedPosition
 	}
@@ -202,4 +199,19 @@ func trimNameSuffix(fullName string) string {
 	}
 
 	return strings.TrimSpace(fullName)
+}
+
+var fpPosRegex = regexp.MustCompile(`(?P<pos>[A-Z]+)\d+`)
+
+// Parse out the position from FantasyPros ranking file.
+// Players are listed like WR1, RB7, QB12, K20, etc.
+func getPosition(q string) model.Position {
+	pos := model.POS_UNKNOWN
+	m := fpPosRegex.FindStringSubmatch(q)
+	if m != nil {
+		p := m[fpPosRegex.SubexpIndex("pos")]
+		pos = model.ParsePosition(p)
+	}
+
+	return pos
 }
