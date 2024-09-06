@@ -50,3 +50,11 @@ func (a *sleeperAdapter) getMatchupResults(l *model.League, week int) ([]model.M
 
 	return matchups, scores, nil
 }
+
+func (a *sleeperAdapter) getRosters(l *model.League) ([]model.Roster, error) {
+	return a.c.sleeper.GetRosters(l.ExternalID)
+}
+
+func (a *sleeperAdapter) getStarters(l *model.League) ([]model.RosterSpot, error) {
+	return a.c.sleeper.GetStarters(l.ExternalID)
+}

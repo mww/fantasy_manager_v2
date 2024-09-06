@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -128,7 +129,19 @@ func rankingsHandler(ctrl controller.C, render *render.Render) http.HandlerFunc 
 			return
 		}
 
-		render.HTML(w, http.StatusOK, "rankings", ranking)
+		players := make([]model.RankingPlayer, 0, len(ranking.Players))
+		for _, p := range ranking.Players {
+			players = append(players, p)
+		}
+		slices.SortFunc(players, func(a, b model.RankingPlayer) int {
+			return int(a.Rank - b.Rank)
+		})
+
+		data := map[string]any{
+			"date":    ranking.Date,
+			"players": players,
+		}
+		render.HTML(w, http.StatusOK, "rankings", data)
 	}
 }
 
@@ -191,14 +204,13 @@ func leaguesHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
 
 func getLeagueHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		leagueID := chi.URLParam(r, "leagueID")
-		id, err := strconv.Atoi(leagueID)
+		leagueID, err := getID(r, "leagueID")
 		if err != nil {
-			render.HTML(w, http.StatusBadRequest, "400", fmt.Sprintf("error parsing league id: %v", err))
+			render.HTML(w, http.StatusBadRequest, "400", err)
 			return
 		}
 
-		l, err := ctrl.GetLeague(r.Context(), int32(id))
+		l, err := ctrl.GetLeague(r.Context(), leagueID)
 		if err != nil {
 			render.HTML(w, http.StatusNotFound, "404", err.Error())
 			return
@@ -210,7 +222,7 @@ func getLeagueHandler(ctrl controller.C, render *render.Render) http.HandlerFunc
 
 func refreshLeagueManagersHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		leagueID, err := getLeagueID(r)
+		leagueID, err := getID(r, "leagueID")
 		if err != nil {
 			render.HTML(w, http.StatusBadRequest, "400", err)
 			return
@@ -228,7 +240,7 @@ func refreshLeagueManagersHandler(ctrl controller.C, render *render.Render) http
 
 func syncWeekResultsHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		leagueID, err := getLeagueID(r)
+		leagueID, err := getID(r, "leagueID")
 		if err != nil {
 			render.HTML(w, http.StatusBadRequest, "400", err)
 			return
@@ -259,7 +271,7 @@ func syncWeekResultsHandler(ctrl controller.C, render *render.Render) http.Handl
 
 func getLeagueResultsHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		leagueID, err := getLeagueID(r)
+		leagueID, err := getID(r, "leagueID")
 		if err != nil {
 			render.HTML(w, http.StatusBadRequest, "400", err)
 			return
@@ -290,6 +302,93 @@ func getLeagueResultsHandler(ctrl controller.C, render *render.Render) http.Hand
 			"week":     week,
 		}
 		render.HTML(w, http.StatusOK, "leagueResults", data)
+	}
+}
+
+func getPowerRankingsHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		leagueID, err := getID(r, "leagueID")
+		if err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", err)
+			return
+		}
+
+		rankings, err := ctrl.ListRankings(r.Context())
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err)
+		}
+
+		data := map[string]any{
+			"leagueID": leagueID,
+			"rankings": rankings,
+		}
+		render.HTML(w, http.StatusOK, "powerRankingsRoot", data)
+	}
+}
+
+func createPowerRankingsHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		leagueID, err := getID(r, "leagueID")
+		if err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", err)
+			return
+		}
+
+		if err := r.ParseForm(); err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", fmt.Sprintf("unable to parse form: %v", err))
+			return
+		}
+
+		rankingID, err := strconv.Atoi(r.FormValue("ranking"))
+		if err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", fmt.Sprintf("unable to parse ranking id: %v", err))
+			return
+		}
+
+		week := 0 // TODO: Get the week from a parameter
+
+		id, err := ctrl.CalculatePowerRanking(r.Context(), leagueID, int32(rankingID), week)
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err)
+			return
+		}
+
+		http.Redirect(w, r, fmt.Sprintf("/leagues/%d/power/%d", leagueID, id), http.StatusSeeOther)
+	}
+}
+
+func showPowerRankingHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("in showPowerRankingHandler")
+		leagueID, err := getID(r, "leagueID")
+		if err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", err)
+			return
+		}
+
+		league, err := ctrl.GetLeague(r.Context(), leagueID)
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err)
+			return
+		}
+
+		powerRankingID, err := getID(r, "powerRankingID")
+		if err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", err)
+			return
+		}
+
+		pr, err := ctrl.GetPowerRanking(r.Context(), leagueID, powerRankingID)
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err)
+			return
+		}
+
+		data := map[string]any{
+			"league": league,
+			"power":  pr,
+		}
+		render.HTML(w, http.StatusOK, "powerRanking", data)
 	}
 }
 
@@ -344,11 +443,11 @@ func leaguesPostHandler(ctrl controller.C, render *render.Render) http.HandlerFu
 	}
 }
 
-func getLeagueID(r *http.Request) (int32, error) {
-	leagueID := chi.URLParam(r, "leagueID")
-	id, err := strconv.Atoi(leagueID)
+func getID(r *http.Request, name string) (int32, error) {
+	strID := chi.URLParam(r, name)
+	id, err := strconv.Atoi(strID)
 	if err != nil {
-		return 0, fmt.Errorf("error parsing leagueID: %w", err)
+		return 0, fmt.Errorf("error parsing %s: %w", name, err)
 	}
 	return int32(id), err
 }

@@ -275,7 +275,7 @@ func (db *postgresDB) GetRanking(ctx context.Context, id int32) (*model.Ranking,
 		}
 		return nil, err
 	}
-	ranking.Players = make([]model.RankingPlayer, 0, 100)
+	ranking.Players = make(map[string]model.RankingPlayer)
 
 	rows, err := db.pool.Query(ctx, rankingsQuery, args)
 	if err != nil {
@@ -290,7 +290,7 @@ func (db *postgresDB) GetRanking(ctx context.Context, id int32) (*model.Ranking,
 		}
 		p.Position = model.ParsePosition(pos)
 		p.Team = model.ParseTeam(team)
-		ranking.Players = append(ranking.Players, p)
+		ranking.Players[p.ID] = p
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error reading results of rankings query: %w", err)
@@ -322,7 +322,7 @@ func (db *postgresDB) AddRanking(ctx context.Context, date time.Time, rankings m
 
 	r := &model.Ranking{
 		Date:    date,
-		Players: make([]model.RankingPlayer, 0, 100),
+		Players: make(map[string]model.RankingPlayer),
 	}
 
 	err = tx.QueryRow(ctx, insertRankingQuery, pgx.NamedArgs{"date": date}).Scan(&r.ID)
@@ -348,19 +348,13 @@ func (db *postgresDB) AddRanking(ctx context.Context, date time.Time, rankings m
 			}
 			return nil, fmt.Errorf("error inserting player ranking: %w", err)
 		}
-		rp := model.RankingPlayer{Rank: ranking, ID: playerID}
-		r.Players = append(r.Players, rp)
+		r.Players[playerID] = model.RankingPlayer{Rank: ranking, ID: playerID}
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error commiting add rankings transactions: %w", err)
 	}
-
-	// Sort r.Players by rank
-	slices.SortFunc(r.Players, func(a, b model.RankingPlayer) int {
-		return int(a.Rank - b.Rank)
-	})
 
 	return r, nil
 }
@@ -642,6 +636,221 @@ func (db *postgresDB) GetResults(ctx context.Context, leagueID int32, week int) 
 		return int(a.MatchupID - b.MatchupID)
 	})
 	return results, nil
+}
+
+func (db *postgresDB) SavePowerRanking(ctx context.Context, leagueID int32, pr *model.PowerRanking) (int32, error) {
+	const insertPRQuery = `INSERT INTO power_rankings (league_id, ranking_id, week) 
+			VALUES (@leagueID, @rankingID, @week) RETURNING id`
+	const insertTeamPowerRankingQuery = `INSERT INTO team_power_rankings (
+				power_ranking_id,
+				league_id,
+				team,
+				rank,
+				rank_change,
+				total_score,
+				roster_score,
+				record_score,
+				streak_score,
+				points_for_score,
+				points_against_score
+			) VALUES (
+			 	@powerRankingID,
+				@leagueID,
+				@team,
+				@rank,
+				@rankChange,
+				@totalScore,
+				@rosterScore,
+				@recordScore,
+				@streakScore,
+				@pointsForScore,
+				@pointsAgainstScore
+			)`
+	const insertRosterQuery = `INSERT INTO power_rankings_rosters (
+				power_ranking_id,
+				league_id,
+				team,
+				player_id,
+				nfl_team,
+				player_rank,
+				player_points,
+				starter
+			) VALUES (
+			 	@powerRankingID,
+				@leagueID,
+				@team,
+				@playerID,
+				@nflTeam,
+				@playerRank,
+				@playerPoints,
+				@starter
+			)`
+
+	tx, err := db.pool.Begin(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	prArgs := pgx.NamedArgs{
+		"leagueID":  leagueID,
+		"rankingID": pr.RankingID,
+		"week":      pr.Week,
+	}
+	err = tx.QueryRow(ctx, insertPRQuery, prArgs).Scan(&pr.ID)
+	if err != nil {
+		return 0, fmt.Errorf("error inserting power ranking: %w", err)
+	}
+	if pr.ID <= 0 {
+		return 0, fmt.Errorf("did not get a valid ID for power ranking, got: %d", pr.ID)
+	}
+
+	for _, t := range pr.Teams {
+		teamArgs := pgx.NamedArgs{
+			"powerRankingID":     pr.ID,
+			"leagueID":           leagueID,
+			"team":               t.TeamID,
+			"rank":               t.Rank,
+			"rankChange":         t.RankChange,
+			"totalScore":         t.TotalScore,
+			"rosterScore":        t.RosterScore,
+			"recordScore":        t.RecordScore,
+			"streakScore":        t.StreakScore,
+			"pointsForScore":     t.PointForScore,
+			"pointsAgainstScore": t.PointsAgainstScore,
+		}
+		if _, err := tx.Exec(ctx, insertTeamPowerRankingQuery, teamArgs); err != nil {
+			return 0, fmt.Errorf("error inserting team %s into power rankings: %w", t.TeamID, err)
+		}
+
+		for _, p := range t.Roster {
+			rosterArgs := pgx.NamedArgs{
+				"powerRankingID": pr.ID,
+				"leagueID":       leagueID,
+				"team":           t.TeamID,
+				"playerID":       p.PlayerID,
+				"nflTeam":        &DBNFLTeam{team: p.NFLTeam},
+				"playerRank":     p.Rank,
+				"playerPoints":   p.PowerRankingPoints,
+				"starter":        p.IsStarter,
+			}
+			if _, err := tx.Exec(ctx, insertRosterQuery, rosterArgs); err != nil {
+				return 0, fmt.Errorf("error inserting player %s into power ranking rosters: %w", p.PlayerID, err)
+			}
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return 0, fmt.Errorf("error commiting transaction: %w", err)
+	}
+
+	return pr.ID, nil
+}
+
+func (db *postgresDB) GetPowerRanking(ctx context.Context, leagueID, powerRankingID int32) (*model.PowerRanking, error) {
+	const prQuery = `SELECT ranking_id, week FROM power_rankings WHERE id=@id AND league_id=@leagueID`
+
+	pr := model.PowerRanking{
+		ID: powerRankingID,
+	}
+	args := pgx.NamedArgs{
+		"id":       powerRankingID,
+		"leagueID": leagueID,
+	}
+	if err := db.pool.QueryRow(ctx, prQuery, args).Scan(&pr.RankingID, &pr.Week); err != nil {
+		return nil, fmt.Errorf("error querying by power ranking id: %w", err)
+	}
+
+	if err := db.getPowerRankingTeams(ctx, &pr, leagueID); err != nil {
+		return nil, err
+	}
+
+	return &pr, nil
+}
+
+func (db *postgresDB) getPowerRankingTeams(ctx context.Context, pr *model.PowerRanking, leagueID int32) error {
+	const teamQuery = `SELECT 
+				t.team, m.team_name, m.manager_name, t.rank, 
+				t.rank_change, t.total_score, t.roster_score, t.record_score,
+				t.streak_score, t.points_for_score, t.points_against_score
+			FROM team_power_rankings AS t INNER JOIN league_managers AS m 
+				ON (t.team=m.external_id AND t.league_id=m.league_id) 
+			WHERE t.power_ranking_id=@id AND t.league_id=@leagueID
+			ORDER BY rank;`
+
+	args := pgx.NamedArgs{
+		"id":       pr.ID,
+		"leagueID": leagueID,
+	}
+	rows, err := db.pool.Query(ctx, teamQuery, args)
+	if err != nil {
+		return fmt.Errorf("error getting team power rank results: %w", err)
+	}
+	for rows.Next() {
+		t := model.TeamPowerRanking{
+			Roster: make([]model.PowerRankingPlayer, 0, 15),
+		}
+
+		var teamName, managerName string
+		err := rows.Scan(&t.TeamID, &teamName, &managerName, &t.Rank,
+			&t.RankChange, &t.TotalScore, &t.RosterScore, &t.RecordScore,
+			&t.StreakScore, &t.PointForScore, &t.PointsAgainstScore)
+		if err != nil {
+			return fmt.Errorf("error scanning team result: %w", err)
+		}
+		t.TeamName = first(teamName, managerName)
+
+		if err := db.getPowerRankingPlayers(ctx, &t, leagueID, pr.ID); err != nil {
+			return err
+		}
+
+		pr.Teams = append(pr.Teams, t)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (db *postgresDB) getPowerRankingPlayers(ctx context.Context, t *model.TeamPowerRanking, leagueID, powerRankingID int32) error {
+	const rosterQuery = `SELECT
+				r.player_id, p.name_first, p.name_last, p.position,
+				r.nfl_team, r.player_rank, r.player_points, r.starter
+			FROM power_rankings_rosters AS r INNER JOIN players AS p
+				ON (r.player_id=p.id)
+			WHERE r.power_ranking_id=@id AND r.league_id=@leagueID AND r.team=@teamID 
+			ORDER BY player_rank;`
+
+	args := pgx.NamedArgs{
+		"id":       powerRankingID,
+		"leagueID": leagueID,
+		"teamID":   t.TeamID,
+	}
+	rows, err := db.pool.Query(ctx, rosterQuery, args)
+	if err != nil {
+		return fmt.Errorf("error getting team roster power rank results: %w", err)
+	}
+	for rows.Next() {
+		var p model.PowerRankingPlayer
+
+		var pos DBPosition
+		var nflTeam DBNFLTeam
+		err := rows.Scan(&p.PlayerID, &p.FirstName, &p.LastName, &pos,
+			&nflTeam, &p.Rank, &p.PowerRankingPoints, &p.IsStarter)
+		if err != nil {
+			return fmt.Errorf("error scanning team roster: %w", err)
+		}
+		p.NFLTeam = nflTeam.team
+		p.Position = pos.position
+
+		t.Roster = append(t.Roster, p)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (db *postgresDB) getPlayer(ctx context.Context, id string) (*model.Player, error) {
@@ -996,6 +1205,12 @@ func (t *DBNFLTeam) ScanText(v pgtype.Text) error {
 }
 
 func (t *DBNFLTeam) TextValue() (pgtype.Text, error) {
+	if t.team == nil {
+		return pgtype.Text{
+			String: "",
+			Valid:  true,
+		}, nil
+	}
 	return pgtype.Text{
 		String: t.team.String(),
 		Valid:  true,

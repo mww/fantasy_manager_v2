@@ -1,0 +1,15 @@
+<div id="create-powerranking">
+    <form id="create-powerranking" method="post" action="/leagues/{{ .leagueID }}/power">
+        <div>
+            <label for="rankings">Select ranking to use</label>
+            <select name="ranking" id="ranking">
+                {{ range $r := .rankings }}
+                    <option value="{{ $r.ID }}">{{ $r.Date | date }}</option>
+                {{ end }}
+            </select>
+        </div>
+        <div>
+            <input type="submit" value="Create Power Ranking" />
+        </div>
+    </form>
+</div>

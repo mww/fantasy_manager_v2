@@ -94,6 +94,47 @@ CREATE TABLE IF NOT EXISTS team_results (
     FOREIGN KEY (league_id, team) REFERENCES league_managers(league_id, external_id)
 );
 
+-- These are instances of power rankings.
+CREATE TABLE IF NOT EXISTS power_rankings (
+    id         serial PRIMARY KEY,
+    league_id  serial REFERENCES leagues(id),
+    ranking_id serial REFERENCES rankings(id), -- Which set of rankings were used to calculate these rankings
+    week       smallint, -- If set week will be used to determine win/loss records and streaks as they apply to power rankings 
+    created    timestamp with time zone DEFAULT (now() at time zone 'utc')
+);
+
+-- These are the individual team results for a specific power ranking
+CREATE TABLE IF NOT EXISTS team_power_rankings (
+    power_ranking_id     serial REFERENCES power_rankings(id),
+    league_id            serial REFERENCES leagues(id),
+    team                 varchar(64),
+    rank                 smallint NOT NULL, -- what ranking did the power ranking algorithm assign the team
+    rank_change          smallint, -- how did the ranking change from the previous ranking?
+    total_score          integer NOT NULL, -- how many points the power ranking algorithm assigned the team
+    roster_score         integer, -- the portion of the total score from the roster
+    record_score         integer, -- the portion of the total score from a team's record
+    streak_score         integer, -- the portion of the total score from a team's current win/loss streak
+    points_for_score     integer, -- the portion of the total score calculated by points scored
+    points_against_score integer, -- the portion of the total score calculated by the points against
+    PRIMARY KEY (power_ranking_id, league_id, team),
+    FOREIGN KEY (league_id, team) REFERENCES league_managers(league_id, external_id)
+);
+
+CREATE TABLE IF NOT EXISTS power_rankings_rosters (
+    power_ranking_id serial REFERENCES power_rankings(id),
+    league_id        serial REFERENCES leagues(id),
+    team             varchar(64),
+    player_id        varchar(16) REFERENCES players(id),
+    nfl_team         varchar(3), -- NFL team of the player, since teams change often
+    player_rank      integer NOT NULL,
+    -- The number of points assigned for this player.
+    -- Non-starters only have a portion of their score used here.
+    player_points    integer NOT NULL,
+    starter          boolean NOT NULL,
+    PRIMARY KEY (power_ranking_id, league_id, team, player_id),
+    FOREIGN KEY (league_id, team) REFERENCES league_managers(league_id, external_id)
+);
+
 CREATE INDEX IF NOT EXISTS player_name_idx ON players USING gin(fts_player);
 CREATE INDEX IF NOT EXISTS player_yahoo_id_idx ON players(yahoo_id);
 CREATE INDEX IF NOT EXISTS player_change_idx ON player_changes(player, created DESC);

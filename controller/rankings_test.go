@@ -97,13 +97,13 @@ func TestRankings(t *testing.T) {
 		t.Fatalf("rankings date is not expected: %s", res1.Date.Format(time.DateOnly))
 	}
 
-	expectedRankings := []model.RankingPlayer{
-		{Rank: 1, ID: testutils.IDJefferson, FirstName: "Justin", LastName: "Jefferson", Position: model.POS_WR, Team: model.TEAM_MIN},
-		{Rank: 2, ID: testutils.IDMcCaffrey, FirstName: "Christian", LastName: "McCaffrey", Position: model.POS_RB, Team: model.TEAM_SFO},
-		{Rank: 3, ID: testutils.IDChase, FirstName: "Ja'Marr", LastName: "Chase", Position: model.POS_WR, Team: model.TEAM_CIN},
-		{Rank: 4, ID: testutils.IDChubb, FirstName: "Nick", LastName: "Chubb", Position: model.POS_RB, Team: model.TEAM_CLE},
-		{Rank: 6, ID: testutils.IDKelce, FirstName: "Travis", LastName: "Kelce", Position: model.POS_TE, Team: model.TEAM_KCC},
-		{Rank: 7, ID: testutils.IDHill, FirstName: "Tyreek", LastName: "Hill", Position: model.POS_WR, Team: model.TEAM_MIA},
+	expectedRankings := map[string]model.RankingPlayer{
+		testutils.IDJefferson: {Rank: 1, ID: testutils.IDJefferson, FirstName: "Justin", LastName: "Jefferson", Position: model.POS_WR, Team: model.TEAM_MIN},
+		testutils.IDMcCaffrey: {Rank: 2, ID: testutils.IDMcCaffrey, FirstName: "Christian", LastName: "McCaffrey", Position: model.POS_RB, Team: model.TEAM_SFO},
+		testutils.IDChase:     {Rank: 3, ID: testutils.IDChase, FirstName: "Ja'Marr", LastName: "Chase", Position: model.POS_WR, Team: model.TEAM_CIN},
+		testutils.IDChubb:     {Rank: 4, ID: testutils.IDChubb, FirstName: "Nick", LastName: "Chubb", Position: model.POS_RB, Team: model.TEAM_CLE},
+		testutils.IDKelce:     {Rank: 6, ID: testutils.IDKelce, FirstName: "Travis", LastName: "Kelce", Position: model.POS_TE, Team: model.TEAM_KCC},
+		testutils.IDHill:      {Rank: 7, ID: testutils.IDHill, FirstName: "Tyreek", LastName: "Hill", Position: model.POS_WR, Team: model.TEAM_MIA},
 	}
 	if !reflect.DeepEqual(res1.Players, expectedRankings) {
 		t.Fatalf("rankings differ from expected - actual: %v", res1.Players)
@@ -113,11 +113,17 @@ func TestRankings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error listing rankings: %v", err)
 	}
-	if len(rankings) != 1 {
-		t.Fatalf("expected 1 result, got: %d", len(rankings))
+	if len(rankings) <= 0 {
+		t.Fatalf("expected 1 or more results, got: %d", len(rankings))
 	}
-	if rankings[0].ID != res1.ID {
-		t.Fatalf("id do not match - expected %d, got %d", res1.ID, rankings[0].ID)
+	idFound := false
+	for _, r := range rankings {
+		if r.ID == res1.ID {
+			idFound = true
+		}
+	}
+	if !idFound {
+		t.Fatal("expected ranking id not found in list operation")
 	}
 
 	if err := ctrl.DeleteRanking(ctx, id); err != nil {

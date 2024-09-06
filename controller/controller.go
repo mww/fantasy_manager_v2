@@ -38,8 +38,13 @@ type C interface {
 	AddLeagueManagers(ctx context.Context, leagueID int32) (*model.League, error) // Will also update the list
 	GetLeague(ctx context.Context, id int32) (*model.League, error)
 	ListLeagues(ctx context.Context) ([]model.League, error)
+	ArchiveLeague(ctx context.Context, id int32) error
 	SyncResultsFromPlatform(ctx context.Context, leagueID int32, week int) error
 	GetLeagueResults(ctx context.Context, leagueID int32, week int) ([]model.Matchup, error)
+
+	GetPowerRanking(ctx context.Context, leagueID, powerRankingID int32) (*model.PowerRanking, error)
+	// Calculates the power ranking and returns the id of the saved rankings
+	CalculatePowerRanking(ctx context.Context, leagueID, rankingID int32, week int) (int32, error)
 }
 
 type controller struct {
@@ -64,6 +69,9 @@ type platformAdpater interface {
 	getManagers(l *model.League) ([]model.LeagueManager, error)
 	sortManagers(m []model.LeagueManager)
 	getMatchupResults(l *model.League, week int) ([]model.Matchup, []model.PlayerScore, error)
+	getRosters(l *model.League) ([]model.Roster, error)
+	// Get all the starting roster spots. This is used in the power rankings calculations.
+	getStarters(l *model.League) ([]model.RosterSpot, error)
 }
 
 func getPlatformAdapter(platform string, c *controller) platformAdpater {
@@ -94,4 +102,12 @@ func (a *nilPlatformAdapter) sortManagers(m []model.LeagueManager) {
 
 func (a *nilPlatformAdapter) getMatchupResults(l *model.League, week int) ([]model.Matchup, []model.PlayerScore, error) {
 	return nil, nil, a.err
+}
+
+func (a *nilPlatformAdapter) getRosters(l *model.League) ([]model.Roster, error) {
+	return nil, a.err
+}
+
+func (a *nilPlatformAdapter) getStarters(l *model.League) ([]model.RosterSpot, error) {
+	return nil, a.err
 }

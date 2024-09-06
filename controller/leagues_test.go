@@ -105,6 +105,11 @@ func TestAddLeague(t *testing.T) {
 				if l.Name != tc.name || l.ExternalID != tc.externalID || l.Platform != tc.platform {
 					t.Errorf("parameters for league are not as expected: %v", l)
 				}
+
+				// Clean up
+				if err := ctrl.ArchiveLeague(ctx, l.ID); err != nil {
+					t.Fatalf("error archiving league: %v", err)
+				}
 			} else {
 				if err.Error() != tc.exErrMsg {
 					t.Errorf("expected error: %s, got: %s", tc.exErrMsg, err.Error())
