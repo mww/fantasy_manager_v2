@@ -158,7 +158,7 @@ func TestCalculateAndGetPowerRanking(t *testing.T) {
 		t.Fatalf("error updating players: %v", err)
 	}
 
-	l, err := ctrl.AddLeague(ctx, model.PlatformSleeper, testutils.ValidLeagueID, "Test League", "2024")
+	l, err := ctrl.AddLeague(ctx, model.PlatformSleeper, testutils.SleeperLeagueID, "Test League", "2024")
 	if err != nil {
 		t.Fatalf("error adding a new league: %v", err)
 	}

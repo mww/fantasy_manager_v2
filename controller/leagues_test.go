@@ -173,7 +173,7 @@ func TestSyncResultsFromPlatform(t *testing.T) {
 		t.Fatalf("error adding players: %v", err)
 	}
 
-	l, err := ctrl.AddLeague(ctx, model.PlatformSleeper, testutils.ValidLeagueID, "Footclan & Friends Dynasty", "2024")
+	l, err := ctrl.AddLeague(ctx, model.PlatformSleeper, testutils.SleeperLeagueID, "Footclan & Friends Dynasty", "2024")
 	if err != nil {
 		t.Fatalf("error adding league: %v", err)
 	}
