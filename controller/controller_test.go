@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -28,4 +29,35 @@ func TestMain(m *testing.M) {
 	defer testDB.Shutdown()
 	code := m.Run()
 	os.Exit(code)
+}
+
+// Add some test coverage for nilPlatformAdapter to meet file level code coverage requirements
+func TestNilPlatformAdapter(t *testing.T) {
+	expectedErr := errors.New("expected error")
+	a := &nilPlatformAdapter{err: expectedErr}
+
+	_, err := a.getLeagues("user", "2023")
+	if !errors.Is(err, expectedErr) {
+		t.Error("getLeagues did not return expected response")
+	}
+
+	_, err = a.getManagers(nil)
+	if !errors.Is(err, expectedErr) {
+		t.Error("getManagers did not return expected response")
+	}
+
+	_, _, err = a.getMatchupResults(nil, 0)
+	if !errors.Is(err, expectedErr) {
+		t.Error("getMatchupResults did not return expected response")
+	}
+
+	_, err = a.getRosters(nil)
+	if !errors.Is(err, expectedErr) {
+		t.Error("getRosters did not return expected response")
+	}
+
+	_, err = a.getStarters(nil)
+	if !errors.Is(err, expectedErr) {
+		t.Error("getStarters did not return expected response")
+	}
 }
