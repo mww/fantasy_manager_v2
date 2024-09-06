@@ -100,7 +100,16 @@ func updatePlayerHandler(ctrl controller.C, render *render.Render) http.HandlerF
 			return
 		}
 
-		render.HTML(w, http.StatusOK, "player", p)
+		scores, err := ctrl.GetPlayerScores(r.Context(), playerID)
+		if err != nil {
+			log.Printf("error getting player scores: %v", err)
+		}
+
+		data := map[string]any{
+			"player": p,
+			"scores": scores,
+		}
+		render.HTML(w, http.StatusOK, "player", data)
 	}
 }
 
