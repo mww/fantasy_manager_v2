@@ -1,11 +1,14 @@
 package controller
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"testing"
 
+	"github.com/mww/fantasy_manager_v2/platforms/yahoo"
+	"github.com/mww/fantasy_manager_v2/sleeper"
 	"github.com/mww/fantasy_manager_v2/testutils"
 )
 
@@ -31,6 +34,17 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func controllerForTest() (C, *testutils.TestController) {
+	tc := testutils.NewTestController(testDB)
+	sleeper := sleeper.NewForTest(tc.SleeperURL())
+	yahoo := yahoo.NewForTest(tc.YahooURL())
+	ctrl, err := New(tc.Clock, testDB.DB, sleeper, yahoo, tc.YahooConfig)
+	if err != nil {
+		panic(fmt.Sprintf("error creating controller for test: %v", err))
+	}
+	return ctrl, tc
+}
+
 // Add some test coverage for nilPlatformAdapter to meet file level code coverage requirements
 func TestNilPlatformAdapter(t *testing.T) {
 	expectedErr := errors.New("expected error")
@@ -41,7 +55,12 @@ func TestNilPlatformAdapter(t *testing.T) {
 		t.Error("getLeagues did not return expected response")
 	}
 
-	_, err = a.getManagers(nil)
+	_, err = a.getLeagueName(context.Background(), "", "")
+	if !errors.Is(err, expectedErr) {
+		t.Error("getLeagueName did not return expected response")
+	}
+
+	_, err = a.getManagers(context.Background(), nil)
 	if !errors.Is(err, expectedErr) {
 		t.Error("getManagers did not return expected response")
 	}

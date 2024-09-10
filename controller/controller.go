@@ -10,7 +10,9 @@ import (
 	"github.com/itbasis/go-clock"
 	"github.com/mww/fantasy_manager_v2/db"
 	"github.com/mww/fantasy_manager_v2/model"
+	"github.com/mww/fantasy_manager_v2/platforms/yahoo"
 	"github.com/mww/fantasy_manager_v2/sleeper"
+	"golang.org/x/oauth2"
 )
 
 // C encapsulates business logic without worrying about any web layers
@@ -34,7 +36,7 @@ type C interface {
 	ListRankings(ctx context.Context) ([]model.Ranking, error)
 
 	GetLeaguesFromPlatform(ctx context.Context, username, platform, year string) ([]model.League, error)
-	AddLeague(ctx context.Context, platform, externalID, name, year string) (*model.League, error)
+	AddLeague(ctx context.Context, platform, externalID, year, stateToken string) (*model.League, error)
 	AddLeagueManagers(ctx context.Context, leagueID int32) (*model.League, error) // Will also update the list
 	GetLeague(ctx context.Context, id int32) (*model.League, error)
 	ListLeagues(ctx context.Context) ([]model.League, error)
@@ -45,19 +47,49 @@ type C interface {
 	GetPowerRanking(ctx context.Context, leagueID, powerRankingID int32) (*model.PowerRanking, error)
 	// Calculates the power ranking and returns the id of the saved rankings
 	CalculatePowerRanking(ctx context.Context, leagueID, rankingID int32, week int) (int32, error)
+
+	// These methods are all for OAuth linking. Start creates a state token and
+	// saves it for 5 minutes, returning the auth code URL.
+	// Exchange makes sure that the state token exists and is valid before exchanging
+	// the code for an oauth token.
+	// and retrieved by the same random state value until the new league can be
+	// created and the token can be properly saved in the DB.
+	// In all cases the state token expires after the 5 minutes and then stash
+	// and retrieve stop working for it.
+	// Once a league has been created the Token can be fully commited to the DB
+	// by calling OAuthSave(). After that the token can only be retrieved with
+	// GetToken().
+	OAuthStart(platform string) (string, error)
+	OAuthExchange(ctx context.Context, state, code string) error
+	OAuthRetrieve(state string) (*oauth2.Token, error)
+	OAuthSave(ctx context.Context, state string, leagueID int32) error
+
+	GetToken(ctx context.Context, leagueID int32) (*oauth2.Token, error)
 }
 
 type controller struct {
-	clock   clock.Clock
-	sleeper sleeper.Client
-	db      db.DB
+	clock       clock.Clock
+	db          db.DB
+	sleeper     sleeper.Client
+	yahoo       *yahoo.Client
+	yahooConfig *oauth2.Config
+	oauthStates map[string]*oauthState
 }
 
-func New(clock clock.Clock, sleeper sleeper.Client, db db.DB) (C, error) {
+type oauthState struct {
+	platform string
+	expiry   time.Time
+	token    *oauth2.Token
+}
+
+func New(clock clock.Clock, db db.DB, sleeper sleeper.Client, yahoo *yahoo.Client, yahooConfig *oauth2.Config) (C, error) {
 	c := &controller{
-		clock:   clock,
-		sleeper: sleeper,
-		db:      db,
+		clock:       clock,
+		db:          db,
+		sleeper:     sleeper,
+		yahoo:       yahoo,
+		yahooConfig: yahooConfig,
+		oauthStates: make(map[string]*oauthState),
 	}
 	return c, nil
 }
@@ -66,7 +98,8 @@ func New(clock clock.Clock, sleeper sleeper.Client, db db.DB) (C, error) {
 // adapter and it will do it. This is internal to the controller package.
 type platformAdpater interface {
 	getLeagues(user, year string) ([]model.League, error)
-	getManagers(l *model.League) ([]model.LeagueManager, error)
+	getLeagueName(ctx context.Context, leagueID, stateToken string) (string, error)
+	getManagers(ctx context.Context, l *model.League) ([]model.LeagueManager, error)
 	sortManagers(m []model.LeagueManager)
 	getMatchupResults(l *model.League, week int) ([]model.Matchup, []model.PlayerScore, error)
 	getRosters(l *model.League) ([]model.Roster, error)
@@ -78,6 +111,8 @@ func getPlatformAdapter(platform string, c *controller) platformAdpater {
 	switch platform {
 	case model.PlatformSleeper:
 		return &sleeperAdapter{c}
+	case model.PlatformYahoo:
+		return &yahooAdapter{c}
 	default:
 		return &nilPlatformAdapter{err: fmt.Errorf("%s is not a supported platform", platform)}
 	}
@@ -93,7 +128,11 @@ func (a *nilPlatformAdapter) getLeagues(user, year string) ([]model.League, erro
 	return nil, a.err
 }
 
-func (a *nilPlatformAdapter) getManagers(l *model.League) ([]model.LeagueManager, error) {
+func (a *nilPlatformAdapter) getLeagueName(ctx context.Context, leagueID, stateToken string) (string, error) {
+	return "", a.err
+}
+
+func (a *nilPlatformAdapter) getManagers(ctx context.Context, l *model.League) ([]model.LeagueManager, error) {
 	return nil, a.err
 }
 

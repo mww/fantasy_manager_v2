@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mww/fantasy_manager_v2/model"
@@ -19,7 +20,11 @@ func (a *sleeperAdapter) getLeagues(user, year string) ([]model.League, error) {
 	return a.c.sleeper.GetLeaguesForUser(userID, year)
 }
 
-func (a *sleeperAdapter) getManagers(l *model.League) ([]model.LeagueManager, error) {
+func (a *sleeperAdapter) getLeagueName(ctx context.Context, leagueID, stateToken string) (string, error) {
+	return a.c.sleeper.GetLeagueName(leagueID)
+}
+
+func (a *sleeperAdapter) getManagers(ctx context.Context, l *model.League) ([]model.LeagueManager, error) {
 	managers, err := a.c.sleeper.GetLeagueManagers(l.ExternalID)
 	if err != nil {
 		return nil, fmt.Errorf("error loading managers from sleeper for %s: %w", l.ExternalID, err)

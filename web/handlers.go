@@ -1,7 +1,6 @@
 package web
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -395,7 +394,13 @@ func platformLeaguesHandler(ctrl controller.C, render *render.Render) http.Handl
 	return func(w http.ResponseWriter, r *http.Request) {
 		platform := r.URL.Query().Get("platform")
 		username := r.URL.Query().Get("username")
-		year := "2024"
+		year := time.Now().Format("2006") // Just get the 4 digit year
+
+		// For Yahoo, start the oauth flow
+		if platform == model.PlatformYahoo {
+			http.Redirect(w, r, "/oauth/link", http.StatusSeeOther)
+			return
+		}
 
 		leagues, err := ctrl.GetLeaguesFromPlatform(r.Context(), username, platform, year)
 		if err != nil {
@@ -420,19 +425,11 @@ func leaguesPostHandler(ctrl controller.C, render *render.Render) http.HandlerFu
 		}
 
 		platform := r.FormValue("platform")
-		leagueData := r.FormValue("league")
+		league := r.FormValue("league")
 		year := r.FormValue("year")
-		var parsed struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
-		}
-		if err := json.Unmarshal([]byte(leagueData), &parsed); err != nil {
-			msg := fmt.Sprintf("error parsing league data: %v", err)
-			log.Print(msg)
-			render.HTML(w, http.StatusBadRequest, "400", msg)
-		}
+		stateToken := r.FormValue("state")
 
-		l, err := ctrl.AddLeague(r.Context(), platform, parsed.ID, parsed.Name, year)
+		l, err := ctrl.AddLeague(r.Context(), platform, league, year, stateToken)
 		if err != nil {
 			render.HTML(w, http.StatusInternalServerError, "500", err.Error())
 			return

@@ -5,23 +5,15 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/itbasis/go-clock"
 	"github.com/mww/fantasy_manager_v2/model"
-	"github.com/mww/fantasy_manager_v2/sleeper"
 	"github.com/mww/fantasy_manager_v2/testutils"
 )
 
 func TestGetLeaguesFromPlatform(t *testing.T) {
-	fakeSleeper := testutils.NewFakeSleeperServer()
-	defer testutils.NewFakeSleeperServer()
-	sleeper := sleeper.NewForTest(fakeSleeper.URL())
-
-	ctrl, err := New(clock.New(), sleeper, testDB.DB)
-	if err != nil {
-		t.Fatalf("error creating new controller: %v", err)
-	}
-
 	ctx := context.Background()
+
+	ctrl, testCtrl := controllerForTest()
+	defer testCtrl.Close()
 
 	tests := map[string]struct {
 		username  string
@@ -59,38 +51,31 @@ func TestGetLeaguesFromPlatform(t *testing.T) {
 }
 
 func TestAddLeague(t *testing.T) {
-	fakeSleeper := testutils.NewFakeSleeperServer()
-	defer testutils.NewFakeSleeperServer()
-	sleeper := sleeper.NewForTest(fakeSleeper.URL())
-
-	ctrl, err := New(clock.New(), sleeper, testDB.DB)
-	if err != nil {
-		t.Fatalf("error creating new controller: %v", err)
-	}
-
 	ctx := context.Background()
+
+	ctrl, testCtrl := controllerForTest()
+	defer testCtrl.Close()
 
 	tests := map[string]struct {
 		platform   string
 		externalID string
-		name       string
 		year       string
 		exErrMsg   string
 	}{
-		"success": {platform: "sleeper", externalID: "123", name: "League 1", year: "2024", exErrMsg: ""},
-		"unsupported platform": {platform: "MFL", externalID: "123", name: "League 1", year: "2024",
+		"success": {platform: "sleeper", externalID: testutils.SleeperLeagueID, year: "2024", exErrMsg: ""},
+		"unsupported platform": {platform: "MFL", externalID: testutils.SleeperLeagueID, year: "2024",
 			exErrMsg: "MFL is not a supported platform"},
-		"bad external id": {platform: "sleeper", externalID: "    ", name: "League 1", year: "2024",
+		"bad external id": {platform: "sleeper", externalID: "    ", year: "2024",
 			exErrMsg: "externalID must be provided"},
-		"bad name": {platform: "sleeper", externalID: "123", name: "", year: "2024",
-			exErrMsg: "league name must be provided"},
-		"bad date": {platform: "sleeper", externalID: "123", name: "League 4", year: "2024-07-01",
+		"bad date": {platform: "sleeper", externalID: testutils.SleeperLeagueID, year: "2024-07-01",
 			exErrMsg: "year parameter must be in the YYYY format, got: 2024-07-01"},
+		"missing external id": {platform: "sleeper", externalID: "123", year: "2024",
+			exErrMsg: "league name not found: unexpected status code from sleeper: 404"},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			l, err := ctrl.AddLeague(ctx, tc.platform, tc.externalID, tc.name, tc.year)
+			l, err := ctrl.AddLeague(ctx, tc.platform, tc.externalID, tc.year, "" /* state */)
 
 			if tc.exErrMsg == "" {
 				if err != nil {
@@ -102,7 +87,7 @@ func TestAddLeague(t *testing.T) {
 				if l.Archived {
 					t.Errorf("error league is archived")
 				}
-				if l.Name != tc.name || l.ExternalID != tc.externalID || l.Platform != tc.platform {
+				if l.Name == "" || l.ExternalID != tc.externalID || l.Platform != tc.platform {
 					t.Errorf("parameters for league are not as expected: %v", l)
 				}
 
@@ -122,16 +107,10 @@ func TestAddLeague(t *testing.T) {
 func TestAddLeagueManagers(t *testing.T) {
 	ctx := context.Background()
 
-	fakeSleeper := testutils.NewFakeSleeperServer()
-	defer testutils.NewFakeSleeperServer()
-	sleeper := sleeper.NewForTest(fakeSleeper.URL())
+	ctrl, testCtrl := controllerForTest()
+	defer testCtrl.Close()
 
-	ctrl, err := New(clock.New(), sleeper, testDB.DB)
-	if err != nil {
-		t.Fatalf("error creating new controller: %v", err)
-	}
-
-	l, err := ctrl.AddLeague(ctx, model.PlatformSleeper, "924039165950484480", "Footclan & Friends Dynasty", "2024")
+	l, err := ctrl.AddLeague(ctx, model.PlatformSleeper, "924039165950484480", "2024", "" /* state */)
 	if err != nil {
 		t.Fatalf("error adding league: %v", err)
 	}
@@ -160,20 +139,14 @@ func TestAddLeagueManagers(t *testing.T) {
 func TestSyncResultsFromPlatform(t *testing.T) {
 	ctx := context.Background()
 
-	fakeSleeper := testutils.NewFakeSleeperServer()
-	defer testutils.NewFakeSleeperServer()
-	sleeper := sleeper.NewForTest(fakeSleeper.URL())
-
-	ctrl, err := New(clock.New(), sleeper, testDB.DB)
-	if err != nil {
-		t.Fatalf("error creating new controller: %v", err)
-	}
+	ctrl, testCtrl := controllerForTest()
+	defer testCtrl.Close()
 
 	if err := ctrl.UpdatePlayers(ctx); err != nil {
 		t.Fatalf("error adding players: %v", err)
 	}
 
-	l, err := ctrl.AddLeague(ctx, model.PlatformSleeper, testutils.SleeperLeagueID, "Footclan & Friends Dynasty", "2024")
+	l, err := ctrl.AddLeague(ctx, model.PlatformSleeper, testutils.SleeperLeagueID, "2024", "" /* state */)
 	if err != nil {
 		t.Fatalf("error adding league: %v", err)
 	}

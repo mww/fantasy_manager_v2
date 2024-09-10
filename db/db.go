@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/mww/fantasy_manager_v2/model"
+	"golang.org/x/oauth2"
 )
 
 type DB interface {
@@ -31,6 +32,9 @@ type DB interface {
 	SaveLeagueManager(ctx context.Context, leagueID int32, managers *model.LeagueManager) error
 	AddLeague(ctx context.Context, league *model.League) error
 	ArchiveLeague(ctx context.Context, id int32) error
+
+	GetToken(ctx context.Context, leagueID int32) (*oauth2.Token, error)
+	SaveToken(ctx context.Context, leagueID int32, token *oauth2.Token) error
 
 	SaveResults(ctx context.Context, leagueID int32, matchups []model.Matchup) error
 	GetResults(ctx context.Context, leagueID int32, week int) ([]model.Matchup, error)

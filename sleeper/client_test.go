@@ -199,6 +199,20 @@ func TestGetLeaguesForUser(t *testing.T) {
 	}
 }
 
+func TestGetLeagueName(t *testing.T) {
+	fakeSleeper := testutils.NewFakeSleeperServer()
+	defer fakeSleeper.Close()
+	c := NewForTest(fakeSleeper.URL())
+
+	name, err := c.GetLeagueName(testutils.SleeperLeagueID)
+	if err != nil {
+		t.Fatalf("unexpected error getting league name: %v", err)
+	}
+	if name != "Footclan & Friends Dynasty" {
+		t.Errorf("name was not the expected value, got: %s", name)
+	}
+}
+
 func TestGetLeagueManagers(t *testing.T) {
 	fakeSleeper := testutils.NewFakeSleeperServer()
 	defer fakeSleeper.Close()

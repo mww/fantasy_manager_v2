@@ -1,6 +1,7 @@
 package model
 
 var PlatformSleeper = "sleeper"
+var PlatformYahoo = "yahoo"
 
 type League struct {
 	ID         int32
@@ -32,8 +33,4 @@ type Matchup struct {
 	TeamB     *TeamResult
 	MatchupID int32
 	Week      int
-}
-
-func IsPlatformSupported(platform string) bool {
-	return platform == PlatformSleeper
 }

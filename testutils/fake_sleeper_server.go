@@ -134,6 +134,7 @@ func serveSleeperFile(w http.ResponseWriter, name string) {
 		return
 	}
 
+	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(b)
 }

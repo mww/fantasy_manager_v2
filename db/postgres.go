@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mww/fantasy_manager_v2/model"
+	"golang.org/x/oauth2"
 )
 
 var (
@@ -537,6 +538,48 @@ func (db *postgresDB) ArchiveLeague(ctx context.Context, id int32) error {
 		return fmt.Errorf("expected 1 row to be affected, instead it was %d", tag.RowsAffected())
 	}
 
+	return nil
+}
+
+func (db *postgresDB) GetToken(ctx context.Context, leagueID int32) (*oauth2.Token, error) {
+	const query = `SELECT access_token, refresh_token, expires FROM tokens WHERE league_id=@id`
+
+	var t oauth2.Token
+	var e pgtype.Timestamptz
+	args := pgx.NamedArgs{
+		"id": leagueID,
+	}
+	err := db.pool.QueryRow(ctx, query, args).Scan(&t.AccessToken, &t.RefreshToken, &e)
+	if err != nil {
+		return nil, fmt.Errorf("error getting token for league %d: %w", leagueID, err)
+	}
+	t.Expiry = e.Time.UTC()
+
+	return &t, nil
+}
+
+func (db *postgresDB) SaveToken(ctx context.Context, leagueID int32, token *oauth2.Token) error {
+	const stmt = `INSERT INTO tokens (league_id, access_token, refresh_token, expires)
+			VALUES(@id, @accessToken, @refreshToken, @expires)
+			ON CONFLICT(league_id) DO UPDATE SET
+				access_token=EXCLUDED.access_token,
+				refresh_token=EXCLUDED.refresh_token,
+				expires=EXCLUDED.expires`
+
+	args := pgx.NamedArgs{
+		"id":           leagueID,
+		"accessToken":  token.AccessToken,
+		"refreshToken": token.RefreshToken,
+		"expires": pgtype.Timestamptz{
+			Time:             token.Expiry.UTC(),
+			InfinityModifier: pgtype.Finite,
+			Valid:            true,
+		},
+	}
+	_, err := db.pool.Exec(ctx, stmt, args)
+	if err != nil {
+		return fmt.Errorf("error inserting/updating token %d: %w", leagueID, err)
+	}
 	return nil
 }
 

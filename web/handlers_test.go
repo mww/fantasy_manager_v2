@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/itbasis/go-clock"
 	"github.com/mww/fantasy_manager_v2/controller"
+	"github.com/mww/fantasy_manager_v2/platforms/yahoo"
 	"github.com/mww/fantasy_manager_v2/sleeper"
 	"github.com/mww/fantasy_manager_v2/testutils"
 )
@@ -47,12 +47,12 @@ func TestMain(m *testing.M) {
 }
 
 func TestRankingsUploadHandler_success(t *testing.T) {
-	fakeSleeper := testutils.NewFakeSleeperServer()
-	defer fakeSleeper.Close()
+	testCtrl := testutils.NewTestController(testDB)
+	defer testCtrl.Close()
+	sleeperClient := sleeper.NewForTest(testCtrl.SleeperURL())
+	yahooClient := yahoo.NewForTest(testCtrl.YahooURL())
 
-	clock := clock.New()
-	sleeper := sleeper.NewForTest(fakeSleeper.URL())
-	ctrl, err := controller.New(clock, sleeper, testDB.DB)
+	ctrl, err := controller.New(testCtrl.Clock, testDB.DB, sleeperClient, yahooClient, testCtrl.YahooConfig)
 	if err != nil {
 		t.Fatalf("error creating controller: %v", err)
 	}
@@ -70,12 +70,12 @@ func TestRankingsUploadHandler_success(t *testing.T) {
 }
 
 func TestRankingsUploadHandler_badFileContentType(t *testing.T) {
-	fakeSleeper := testutils.NewFakeSleeperServer()
-	defer fakeSleeper.Close()
+	testCtrl := testutils.NewTestController(testDB)
+	defer testCtrl.Close()
+	sleeperClient := sleeper.NewForTest(testCtrl.SleeperURL())
+	yahooClient := yahoo.NewForTest(testCtrl.YahooURL())
 
-	clock := clock.New()
-	sleeper := sleeper.NewForTest(fakeSleeper.URL())
-	ctrl, err := controller.New(clock, sleeper, testDB.DB)
+	ctrl, err := controller.New(testCtrl.Clock, testDB.DB, sleeperClient, yahooClient, testCtrl.YahooConfig)
 	if err != nil {
 		t.Fatalf("error creating controller: %v", err)
 	}
@@ -98,12 +98,12 @@ func TestRankingsUploadHandler_badFileContentType(t *testing.T) {
 }
 
 func TestRankingsUploadHandler_badDate(t *testing.T) {
-	fakeSleeper := testutils.NewFakeSleeperServer()
-	defer fakeSleeper.Close()
+	testCtrl := testutils.NewTestController(testDB)
+	defer testCtrl.Close()
+	sleeperClient := sleeper.NewForTest(testCtrl.SleeperURL())
+	yahooClient := yahoo.NewForTest(testCtrl.YahooURL())
 
-	clock := clock.New()
-	sleeper := sleeper.NewForTest(fakeSleeper.URL())
-	ctrl, err := controller.New(clock, sleeper, testDB.DB)
+	ctrl, err := controller.New(testCtrl.Clock, testDB.DB, sleeperClient, yahooClient, testCtrl.YahooConfig)
 	if err != nil {
 		t.Fatalf("error creating controller: %v", err)
 	}
