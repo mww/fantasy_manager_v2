@@ -10,8 +10,8 @@ import (
 	"github.com/itbasis/go-clock"
 	"github.com/mww/fantasy_manager_v2/db"
 	"github.com/mww/fantasy_manager_v2/model"
+	"github.com/mww/fantasy_manager_v2/platforms/sleeper"
 	"github.com/mww/fantasy_manager_v2/platforms/yahoo"
-	"github.com/mww/fantasy_manager_v2/sleeper"
 	"golang.org/x/oauth2"
 )
 

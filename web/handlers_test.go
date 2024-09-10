@@ -14,8 +14,8 @@ import (
 	"testing"
 
 	"github.com/mww/fantasy_manager_v2/controller"
+	"github.com/mww/fantasy_manager_v2/platforms/sleeper"
 	"github.com/mww/fantasy_manager_v2/platforms/yahoo"
-	"github.com/mww/fantasy_manager_v2/sleeper"
 	"github.com/mww/fantasy_manager_v2/testutils"
 )
 
