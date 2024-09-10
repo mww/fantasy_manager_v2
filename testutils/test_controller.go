@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 
@@ -33,7 +34,9 @@ func (c *TestController) YahooURL() string {
 
 func NewTestController(db *TestDB) *TestController {
 	fakeOAuthServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("request to fake oauth server: %s", r.RequestURI)
 		w.Header().Add("Content-Type", "application/json")
+		w.Header().Add("Cache-Control", "no-store")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{
 			"access_token": "access_token",

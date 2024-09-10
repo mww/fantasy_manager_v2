@@ -106,10 +106,15 @@ func TestOAuth_getExpiredToken(t *testing.T) {
 		ctrl.ArchiveLeague(ctx, l.ID)
 	}()
 
+	expiryTime, err := time.ParseInLocation(time.DateTime, "2024-09-01 01:02:00", time.UTC)
+	if err != nil {
+		t.Fatalf("error parsing expiryTime: %v", err)
+	}
+
 	token := &oauth2.Token{
 		AccessToken:  "initialAccessToken",
 		RefreshToken: "initialRefreshToken",
-		Expiry:       testCtrl.Clock.Now().Add(-10 * time.Minute), // expires in the past
+		Expiry:       expiryTime,
 	}
 	if err := testDB.DB.SaveToken(ctx, l.ID, token); err != nil {
 		t.Fatalf("unexpected error saving token: %v", err)

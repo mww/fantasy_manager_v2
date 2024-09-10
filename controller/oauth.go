@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"math/rand"
@@ -81,7 +80,6 @@ func (c *controller) GetToken(ctx context.Context, leagueID int32) (*oauth2.Toke
 	// TODO: verify if this is still true, or if the library has been
 	// changed to remove this being necessary.
 	if t.Expiry.Before(c.clock.Now()) {
-		log.Printf("refreshing token for league: %d", leagueID)
 		tknSrc := c.yahooConfig.TokenSource(ctx, t)
 
 		t, err = tknSrc.Token()
