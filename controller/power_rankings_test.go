@@ -9,9 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/itbasis/go-clock"
 	"github.com/mww/fantasy_manager_v2/model"
-	"github.com/mww/fantasy_manager_v2/sleeper"
 	"github.com/mww/fantasy_manager_v2/testutils"
 )
 
@@ -143,14 +141,8 @@ func TestCalculateRosterScores(t *testing.T) {
 }
 
 func TestCalculateAndGetPowerRanking(t *testing.T) {
-	fakeSleeper := testutils.NewFakeSleeperServer()
-	defer testutils.NewFakeSleeperServer()
-	sleeper := sleeper.NewForTest(fakeSleeper.URL())
-
-	ctrl, err := New(clock.New(), sleeper, testDB.DB)
-	if err != nil {
-		t.Fatalf("error creating new controller: %v", err)
-	}
+	ctrl, testCtrl := controllerForTest()
+	defer testCtrl.Close()
 
 	ctx := context.Background()
 
@@ -158,7 +150,7 @@ func TestCalculateAndGetPowerRanking(t *testing.T) {
 		t.Fatalf("error updating players: %v", err)
 	}
 
-	l, err := ctrl.AddLeague(ctx, model.PlatformSleeper, testutils.ValidLeagueID, "Test League", "2024")
+	l, err := ctrl.AddLeague(ctx, model.PlatformSleeper, testutils.SleeperLeagueID, "2024", "" /* state */)
 	if err != nil {
 		t.Fatalf("error adding a new league: %v", err)
 	}

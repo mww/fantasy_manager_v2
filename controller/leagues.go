@@ -20,8 +20,12 @@ func (c *controller) GetLeaguesFromPlatform(ctx context.Context, username, platf
 	return getPlatformAdapter(platform, c).getLeagues(username, year)
 }
 
-func (c *controller) AddLeague(ctx context.Context, platform, externalID, name, year string) (*model.League, error) {
-	if !model.IsPlatformSupported(platform) {
+func (c *controller) AddLeague(ctx context.Context, platform, externalID, year, stateToken string) (*model.League, error) {
+	adapter := getPlatformAdapter(platform, c)
+	// Se if the platform is supported. If not then we will
+	// be able to cast it to the nilPlatformAdapter.
+	_, ok := adapter.(*nilPlatformAdapter)
+	if ok {
 		return nil, fmt.Errorf("%s is not a supported platform", platform)
 	}
 
@@ -30,9 +34,9 @@ func (c *controller) AddLeague(ctx context.Context, platform, externalID, name, 
 		return nil, errors.New("externalID must be provided")
 	}
 
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return nil, errors.New("league name must be provided")
+	name, err := adapter.getLeagueName(ctx, externalID, stateToken)
+	if err != nil {
+		return nil, fmt.Errorf("league name not found: %w", err)
 	}
 
 	if _, err := time.Parse(yearOnlyFormat, year); err != nil {
@@ -49,6 +53,12 @@ func (c *controller) AddLeague(ctx context.Context, platform, externalID, name, 
 	if err := c.db.AddLeague(ctx, l); err != nil {
 		return nil, err
 	}
+
+	if stateToken != "" {
+		if err := c.OAuthSave(ctx, stateToken, l.ID); err != nil {
+			return nil, err
+		}
+	}
 	return l, nil
 }
 
@@ -58,7 +68,7 @@ func (c *controller) AddLeagueManagers(ctx context.Context, leagueID int32) (*mo
 		return nil, fmt.Errorf("error getting league from DB: %w", err)
 	}
 
-	l.Managers, err = getPlatformAdapter(l.Platform, c).getManagers(l)
+	l.Managers, err = getPlatformAdapter(l.Platform, c).getManagers(ctx, l)
 	if err != nil {
 		return nil, fmt.Errorf("error getting managers: %w", err)
 	}

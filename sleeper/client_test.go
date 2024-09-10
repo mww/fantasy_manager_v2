@@ -199,6 +199,20 @@ func TestGetLeaguesForUser(t *testing.T) {
 	}
 }
 
+func TestGetLeagueName(t *testing.T) {
+	fakeSleeper := testutils.NewFakeSleeperServer()
+	defer fakeSleeper.Close()
+	c := NewForTest(fakeSleeper.URL())
+
+	name, err := c.GetLeagueName(testutils.SleeperLeagueID)
+	if err != nil {
+		t.Fatalf("unexpected error getting league name: %v", err)
+	}
+	if name != "Footclan & Friends Dynasty" {
+		t.Errorf("name was not the expected value, got: %s", name)
+	}
+}
+
 func TestGetLeagueManagers(t *testing.T) {
 	fakeSleeper := testutils.NewFakeSleeperServer()
 	defer fakeSleeper.Close()
@@ -269,7 +283,7 @@ func TestGetMatchupResults(t *testing.T) {
 		{PlayerID: "11439", Score: -200},
 	}
 
-	matchups, scores, err := c.GetMatchupResults(testutils.ValidLeagueID, 1)
+	matchups, scores, err := c.GetMatchupResults(testutils.SleeperLeagueID, 1)
 	if err != nil {
 		t.Fatalf("unexpected error getting matchup results: %v", err)
 	}
@@ -315,7 +329,7 @@ func TestGetRosters(t *testing.T) {
 		PlayerIDs: []string{"11439", "1352", "1466", "2216", "2359", "2449"},
 	}
 
-	rosters, err := c.GetRosters(testutils.ValidLeagueID)
+	rosters, err := c.GetRosters(testutils.SleeperLeagueID)
 	if err != nil {
 		t.Errorf("unexpected error loading rosters: %v", err)
 	}
@@ -341,7 +355,7 @@ func TestGetStarters(t *testing.T) {
 	defer fakeSleeper.Close()
 	c := NewForTest(fakeSleeper.URL())
 
-	starters, err := c.GetStarters(testutils.ValidLeagueID)
+	starters, err := c.GetStarters(testutils.SleeperLeagueID)
 	if err != nil {
 		t.Errorf("unexpected error returned: %v", err)
 	}

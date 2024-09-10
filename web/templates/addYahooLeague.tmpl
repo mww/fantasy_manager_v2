@@ -1,0 +1,10 @@
+<div class="addLeague">
+  <form id="search" method="post" action="/leagues">
+    <input type="hidden" id="platform" name="platform" value="yahoo" />
+    <input type="hidden" id="year" name="year" value="{{ .year }}" />
+    <input type="hidden" id="state" name="state" value="{{ .state }}" />
+    <div><label for="league">Yahoo league id: (with a URL like https://football.fantasysports.yahoo.com/f1/149976, the league id is 149976)</label></div>
+    <div><input type="text" id="league" name="league" /></div>
+    <input type="submit" value="Add League" />
+  </form>
+</div>

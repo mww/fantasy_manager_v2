@@ -9,7 +9,6 @@ import (
 
 	"github.com/mww/fantasy_manager_v2/db"
 	"github.com/mww/fantasy_manager_v2/model"
-	"github.com/mww/fantasy_manager_v2/sleeper"
 	"github.com/mww/fantasy_manager_v2/testutils"
 )
 
@@ -117,10 +116,9 @@ func TestGetPlayerSearchQuery(t *testing.T) {
 
 func TestUpdatePlayerNickname(t *testing.T) {
 	ctx := context.Background()
-	sleeper, err := sleeper.New()
-	if err != nil {
-		t.Fatalf("error getting sleeper client: %v", err)
-	}
+
+	ctrl, testCtrl := controllerForTest()
+	defer testCtrl.Close()
 
 	// Using a slice to enforce test ordering.
 	// Some tests rely on other tests being run first.
@@ -161,15 +159,10 @@ func TestUpdatePlayerNickname(t *testing.T) {
 		},
 	}
 
-	ctrl, err := New(testDB.Clock, sleeper, testDB.DB)
-	if err != nil {
-		t.Fatalf("error constructing controller: %v", err)
-	}
-
 	for _, tc := range tests {
 
 		t.Run(tc.name, func(t *testing.T) {
-			err = ctrl.UpdatePlayerNickname(ctx, tc.id, tc.nn)
+			err := ctrl.UpdatePlayerNickname(ctx, tc.id, tc.nn)
 			if !errorsEqual(tc.err, err) {
 				t.Errorf("expected err '%v', got '%v'", tc.err, err)
 			}
@@ -188,16 +181,10 @@ func TestUpdatePlayerNickname(t *testing.T) {
 }
 
 func TestUpdatePlayers_success(t *testing.T) {
-	fakeSleeper := testutils.NewFakeSleeperServer()
-	defer fakeSleeper.Close()
+	ctrl, testCtrl := controllerForTest()
+	defer testCtrl.Close()
 
-	sleeperClient := sleeper.NewForTest(fakeSleeper.URL())
-	ctrl, err := New(testDB.Clock, sleeperClient, testDB.DB)
-	if err != nil {
-		t.Fatalf("error creating controller: %v", err)
-	}
-
-	err = ctrl.UpdatePlayers(context.Background())
+	err := ctrl.UpdatePlayers(context.Background())
 	if err != nil {
 		t.Errorf("error updating players: %v", err)
 	}
@@ -210,14 +197,8 @@ func TestUpdatePlayers_success(t *testing.T) {
 }
 
 func TestRunPeriodicPlayerUpdates(t *testing.T) {
-	fakeSleeper := testutils.NewFakeSleeperServer()
-	defer fakeSleeper.Close()
-
-	sleeperClient := sleeper.NewForTest(fakeSleeper.URL())
-	ctrl, err := New(testDB.Clock, sleeperClient, testDB.DB)
-	if err != nil {
-		t.Fatalf("error creating controller: %v", err)
-	}
+	ctrl, testCtrl := controllerForTest()
+	defer testCtrl.Close()
 
 	shutdown := make(chan bool, 1)
 	go func() {

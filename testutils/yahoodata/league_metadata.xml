@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fantasy_content xml:lang="en-US" yahoo:uri="http://fantasysports.yahooapis.com/fantasy/v2/league/223.l.431" xmlns:yahoo="http://www.yahooapis.com/v1/base.rng" time="181.80584907532ms" copyright="Data provided by Yahoo! and STATS, LLC" xmlns="http://fantasysports.yahooapis.com/fantasy/v2/base.rng">
+  <league>
+    <league_key>223.l.431</league_key>
+    <league_id>431</league_id>
+    <name>Y! Friends and Family League</name>
+    <url>https://football.fantasysports.yahoo.com/archive/pnfl/2009/431</url>
+    <draft_status>postdraft</draft_status>
+    <num_teams>14</num_teams>
+    <edit_key>17</edit_key>
+    <weekly_deadline/>
+    <league_update_timestamp>1262595518</league_update_timestamp>
+    <scoring_type>head</scoring_type>
+    <current_week>16</current_week>
+    <start_week>1</start_week>
+    <end_week>16</end_week>
+    <is_finished>1</is_finished>
+  </league>
+</fantasy_content>

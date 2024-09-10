@@ -13,6 +13,7 @@ import (
 	"github.com/itbasis/go-clock"
 	"github.com/mww/fantasy_manager_v2/containers"
 	"github.com/mww/fantasy_manager_v2/model"
+	"golang.org/x/oauth2"
 )
 
 var (
@@ -536,6 +537,60 @@ func TestLeagues(t *testing.T) {
 	}
 	if len(leagues) != 0 {
 		t.Errorf("expected 0 leagues, instead got: %d", len(leagues))
+	}
+}
+
+func TestTokens(t *testing.T) {
+	ctx := context.Background()
+
+	l := getLeague()
+	if err := testDB.AddLeague(ctx, l); err != nil {
+		t.Fatalf("error adding league: %v", err)
+	}
+	// Clean up after the test
+	defer func() {
+		testDB.ArchiveLeague(ctx, l.ID)
+	}()
+
+	expiry, err := time.ParseInLocation(time.DateTime, "2024-09-09 14:45:01", time.UTC)
+	if err != nil {
+		t.Fatalf("error parsing date time: %v", err)
+	}
+
+	token := &oauth2.Token{
+		AccessToken:  "access-token",
+		RefreshToken: "refresh-token",
+		Expiry:       expiry,
+	}
+
+	if err := testDB.SaveToken(ctx, l.ID, token); err != nil {
+		t.Fatalf("error saving token: %v", err)
+	}
+
+	t2, err := testDB.GetToken(ctx, l.ID)
+	if err != nil {
+		t.Fatalf("error getting token by league id: %v", err)
+	}
+	if !reflect.DeepEqual(token, t2) {
+		t.Errorf("expected token to be: %v, but got: %v", token, t2)
+	}
+
+	t2.AccessToken = "access-token-2"
+	t2.RefreshToken = "refresh-token-2"
+	if err := testDB.SaveToken(ctx, l.ID, t2); err != nil {
+		t.Fatalf("error saving updating token: %v", err)
+	}
+
+	t3, err := testDB.GetToken(ctx, l.ID)
+	if err != nil {
+		t.Fatalf("error getting updated token: %v", err)
+	}
+
+	if t3.AccessToken != t2.AccessToken {
+		t.Errorf("access token not updated, expected %s, got %s", t2.AccessToken, t3.AccessToken)
+	}
+	if t3.RefreshToken != t2.RefreshToken {
+		t.Errorf("refresh token not updated, expected %s, got %s", t2.RefreshToken, t3.RefreshToken)
 	}
 }
 

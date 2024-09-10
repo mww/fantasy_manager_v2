@@ -58,6 +58,14 @@ CREATE TABLE IF NOT EXISTS leagues (
     created     timestamp with time zone DEFAULT (now() at time zone 'utc')
 );
 
+CREATE TABLE IF NOT EXISTS tokens (
+    league_id     serial REFERENCES leagues(id),
+    access_token  text,
+    refresh_token text,
+    expires       timestamp with time zone,
+    PRIMARY KEY (league_id)
+);
+
 CREATE TABLE IF NOT EXISTS league_managers (
     league_id    serial REFERENCES leagues(id),
     external_id  varchar(64) NOT NULL,

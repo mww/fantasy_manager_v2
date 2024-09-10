@@ -11,7 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-const ValidLeagueID = "924039165950484480"
+const SleeperLeagueID = "924039165950484480"
 
 //go:embed sleeperdata
 var sleeperdata embed.FS
@@ -52,7 +52,7 @@ func (f *FakeSleeperServer) URL() string {
 }
 
 func nflPlayersHandler(w http.ResponseWriter, r *http.Request) {
-	serveFile(w, "players.json")
+	serveSleeperFile(w, "players.json")
 }
 
 func userLeaguesHandler(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +60,7 @@ func userLeaguesHandler(w http.ResponseWriter, r *http.Request) {
 	year := chi.URLParam(r, "year")
 
 	if userID == "12345678" && year == "2024" {
-		serveFile(w, "user_leagues.json")
+		serveSleeperFile(w, "user_leagues.json")
 	} else {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("[]"))
@@ -70,7 +70,7 @@ func userLeaguesHandler(w http.ResponseWriter, r *http.Request) {
 func sleeperUserHandler(w http.ResponseWriter, r *http.Request) {
 	username := chi.URLParam(r, "username")
 	if username == "sleeperuser" {
-		serveFile(w, "sleeperuser.json")
+		serveSleeperFile(w, "sleeperuser.json")
 	} else {
 		// requesting a user that doesn't exist seems to return a 200 with "null" as the response body as of 2024-08-12
 		w.WriteHeader(http.StatusOK)
@@ -80,8 +80,8 @@ func sleeperUserHandler(w http.ResponseWriter, r *http.Request) {
 
 func leagueHandler(w http.ResponseWriter, r *http.Request) {
 	leagueID := chi.URLParam(r, "leagueID")
-	if leagueID == ValidLeagueID {
-		serveFile(w, "league.json")
+	if leagueID == SleeperLeagueID {
+		serveSleeperFile(w, "league.json")
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("null"))
@@ -90,8 +90,8 @@ func leagueHandler(w http.ResponseWriter, r *http.Request) {
 
 func leagueUsersHandler(w http.ResponseWriter, r *http.Request) {
 	leagueID := chi.URLParam(r, "leagueID")
-	if leagueID == ValidLeagueID {
-		serveFile(w, "league_users.json")
+	if leagueID == SleeperLeagueID {
+		serveSleeperFile(w, "league_users.json")
 	} else {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("[]"))
@@ -100,8 +100,8 @@ func leagueUsersHandler(w http.ResponseWriter, r *http.Request) {
 
 func leagueRostersHandler(w http.ResponseWriter, r *http.Request) {
 	leagueID := chi.URLParam(r, "leagueID")
-	if leagueID == ValidLeagueID {
-		serveFile(w, "league_rosters.json")
+	if leagueID == SleeperLeagueID {
+		serveSleeperFile(w, "league_rosters.json")
 	} else {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("[]"))
@@ -110,10 +110,10 @@ func leagueRostersHandler(w http.ResponseWriter, r *http.Request) {
 
 func leagueMatchupsHandlers(w http.ResponseWriter, r *http.Request) {
 	leagueID := chi.URLParam(r, "leagueID")
-	if leagueID == ValidLeagueID {
+	if leagueID == SleeperLeagueID {
 		if week, err := strconv.Atoi(chi.URLParam(r, "week")); err == nil {
 			if week == 1 {
-				serveFile(w, "matchups-week-01.json")
+				serveSleeperFile(w, "matchups-week-01.json")
 				return
 			}
 		} else {
@@ -126,7 +126,7 @@ func leagueMatchupsHandlers(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"errMsg": "not found"}`))
 }
 
-func serveFile(w http.ResponseWriter, name string) {
+func serveSleeperFile(w http.ResponseWriter, name string) {
 	b, err := sleeperdata.ReadFile(fmt.Sprintf("sleeperdata/%s", name))
 	if err != nil {
 		log.Printf("error reading sleeperdata/%s: %v", name, err)
@@ -134,6 +134,7 @@ func serveFile(w http.ResponseWriter, name string) {
 		return
 	}
 
+	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(b)
 }

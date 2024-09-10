@@ -24,6 +24,8 @@ type Client interface {
 	// Get all of the leagues for the user and year.
 	GetLeaguesForUser(userID, year string) ([]model.League, error)
 
+	GetLeagueName(leagueID string) (string, error)
+
 	// Get all of the league managers for a specific league.
 	GetLeagueManagers(leagueID string) ([]model.LeagueManager, error)
 
@@ -125,6 +127,19 @@ func (c *client) GetLeaguesForUser(userID, year string) ([]model.League, error) 
 	}
 
 	return res, nil
+}
+
+func (c *client) GetLeagueName(leagueID string) (string, error) {
+	var league struct {
+		Name string `json:"name"`
+	}
+	if err := c.sleeperRequest(&league, "/v1/league/%s", leagueID); err != nil {
+		return "", err
+	}
+	if league.Name == "" {
+		return "", errors.New("league name not found")
+	}
+	return league.Name, nil
 }
 
 func (c *client) GetLeagueManagers(leagueID string) ([]model.LeagueManager, error) {

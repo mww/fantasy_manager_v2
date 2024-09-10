@@ -1,8 +1,13 @@
 <div class="addLeague">
   <form id="search" method="get" action="/leagues/platformLeagues">
-    <input type="hidden" id="platform" name="platform" value="sleeper" />
-    <div>
-      <div><label for="username">Sleeper username:</label></div>
+      <div>
+        <label for="platform">Select platform</label>
+        <select name="platform" id="platform">
+          <option value="sleeper">Sleeper</option>
+          <option value="yahoo">Yahoo</option>
+        </select>
+      <div>
+      <div><label for="username">Username for sleeper, empty for yahoo</label></div>
       <div><input type="text" id="username" name="username" /></div>
     </div>
     <div><input type="submit" value="Next" /></div>

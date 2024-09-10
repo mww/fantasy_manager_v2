@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/mww/fantasy_manager_v2/model"
-	"github.com/mww/fantasy_manager_v2/sleeper"
 	"github.com/mww/fantasy_manager_v2/testutils"
 )
 
@@ -38,12 +37,14 @@ func TestGetPlayerRankingMap(t *testing.T) {
 
 	ctx := context.Background()
 
-	fakeSleeper := testutils.NewFakeSleeperServer()
-	defer fakeSleeper.Close()
+	c1, testCtrl := controllerForTest()
+	defer testCtrl.Close()
 
-	sleeperClient := sleeper.NewForTest(fakeSleeper.URL())
-	ctrl := &controller{sleeper: sleeperClient, db: testDB.DB}
+	if err := c1.UpdatePlayers(ctx); err != nil {
+		t.Fatalf("error adding players for test: %v", err)
+	}
 
+	ctrl := c1.(*controller)
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			r := strings.NewReader(tc.csvData)
@@ -69,14 +70,9 @@ func TestGetPlayerRankingMap(t *testing.T) {
 func TestRankings(t *testing.T) {
 	ctx := context.Background()
 
-	fakeSleeper := testutils.NewFakeSleeperServer()
-	defer fakeSleeper.Close()
+	ctrl, testCtrl := controllerForTest()
+	defer testCtrl.Close()
 
-	sleeperClient := sleeper.NewForTest(fakeSleeper.URL())
-	ctrl, err := New(testDB.Clock, sleeperClient, testDB.DB)
-	if err != nil {
-		t.Fatalf("error constructing controller: %v", err)
-	}
 	if err := ctrl.UpdatePlayers(ctx); err != nil {
 		t.Fatalf("error getting players: %v", err)
 	}
