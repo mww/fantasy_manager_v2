@@ -54,4 +54,21 @@ func TestYahooAdapter(t *testing.T) {
 			t.Errorf("expected managers[%d].TeamName to be %s, but was %s", i, managers[i].TeamName, expectedNames[i])
 		}
 	}
+
+	// Test methods that aren't implemented
+	if _, err := adapter.getLeagues("user", "2024"); err == nil {
+		t.Errorf("expected getLeagues to return an error")
+	}
+
+	if _, _, err := adapter.getMatchupResults(nil, 1); err == nil {
+		t.Errorf("expected getMatchupResults to return an error")
+	}
+
+	if _, err := adapter.getRosters(nil); err == nil {
+		t.Errorf("expected getRosters to return an error")
+	}
+
+	if _, err := adapter.getStarters(nil); err == nil {
+		t.Errorf("expected getStarters to return an error")
+	}
 }

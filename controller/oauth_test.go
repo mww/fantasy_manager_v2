@@ -9,6 +9,7 @@ import (
 
 	"github.com/mww/fantasy_manager_v2/model"
 	"github.com/mww/fantasy_manager_v2/testutils"
+	"golang.org/x/oauth2"
 )
 
 func TestOAuthFlow(t *testing.T) {
@@ -21,6 +22,9 @@ func TestOAuthFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error adding league: %v", err)
 	}
+	defer func() {
+		ctrl.ArchiveLeague(ctx, l.ID)
+	}()
 
 	authURL, err := ctrl.OAuthStart(model.PlatformYahoo)
 	state := validateOAuthStart(t, authURL, err)
@@ -85,6 +89,44 @@ func TestOAuth_stateExpired(t *testing.T) {
 	err = ctrl.OAuthExchange(ctx, state, "code")
 	if err == nil || err.Error() != "state is not valid" {
 		t.Errorf("expected error but got wrong value: %v", err)
+	}
+}
+
+func TestOAuth_getExpiredToken(t *testing.T) {
+	ctx := context.Background()
+
+	ctrl, testCtrl := controllerForTest()
+	defer testCtrl.Close()
+
+	l, err := ctrl.AddLeague(ctx, model.PlatformSleeper, testutils.SleeperLeagueID, "2024", "" /* state */)
+	if err != nil {
+		t.Fatalf("unexpected error adding league: %v", err)
+	}
+	defer func() {
+		ctrl.ArchiveLeague(ctx, l.ID)
+	}()
+
+	token := &oauth2.Token{
+		AccessToken:  "initialAccessToken",
+		RefreshToken: "initialRefreshToken",
+		Expiry:       testCtrl.Clock.Now().Add(-10 * time.Minute), // expires in the past
+	}
+	if err := testDB.DB.SaveToken(ctx, l.ID, token); err != nil {
+		t.Fatalf("unexpected error saving token: %v", err)
+	}
+
+	t2, err := ctrl.GetToken(ctx, l.ID)
+	if err != nil {
+		t.Fatalf("unexpected error getting token: %v", err)
+	}
+	if t2.AccessToken != "access_token" {
+		t.Errorf("access token was not expected value: %s", t2.AccessToken)
+	}
+	if t2.RefreshToken != "refresh_token" {
+		t.Errorf("refresh token was not expected value: %s", t2.RefreshToken)
+	}
+	if t2.Expiry.IsZero() || t2.Expiry.Before(testCtrl.Clock.Now()) {
+		t.Errorf("expiry time was not in the future")
 	}
 }
 
