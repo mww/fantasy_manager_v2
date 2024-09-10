@@ -51,8 +51,8 @@ func leagueMetadataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte("error"))
+	w.WriteHeader(http.StatusForbidden)
+	w.Write([]byte(forbiddenMessage))
 }
 
 func leagueSettingsHandler(w http.ResponseWriter, r *http.Request) {
@@ -89,3 +89,10 @@ func serveYahooFile(w http.ResponseWriter, name string) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(b)
 }
+
+const forbiddenMessage = `<?xml version="1.0" encoding="UTF-8"?>
+<error xml:lang="en-us" yahoo:uri="http://fantasysports.yahooapis.com/fantasy/v2/league/nfl.l.149975" 
+xmlns:yahoo="http://www.yahooapis.com/v1/base.rng" xmlns="http://www.yahooapis.com/v1/base.rng">
+    <description>You are not allowed to view this page because you are not in this league.</description>
+    <detail/>
+</error>`

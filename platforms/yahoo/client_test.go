@@ -24,6 +24,18 @@ func TestGetLeagueMetadata(t *testing.T) {
 	}
 }
 
+func TestGetLeagueMetadata_badLeagueId(t *testing.T) {
+	fakeYahoo := testutils.NewFakeYahooServer()
+	defer fakeYahoo.Close()
+
+	c := NewForTest(fakeYahoo.URL())
+
+	_, err := c.GetLeagueName(http.DefaultClient, "987")
+	if err == nil {
+		t.Fatal("expected an error, but got none")
+	}
+}
+
 func TestGetStarters(t *testing.T) {
 	fakeYahoo := testutils.NewFakeYahooServer()
 	defer fakeYahoo.Close()

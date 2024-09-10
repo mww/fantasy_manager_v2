@@ -30,12 +30,13 @@ var (
 type TestDB struct {
 	container *containers.DBContainer
 	DB        db.DB
-	Clock     clock.Clock
+	Clock     *clock.Mock
 }
 
 func NewTestDB() *TestDB {
 	container := containers.NewDBContainer()
-	clock := clock.New()
+	clock := clock.NewMock()
+	clock.Set(time.Now())
 
 	db, err := db.New(context.Background(), container.ConnectionString(), clock)
 	if err != nil {

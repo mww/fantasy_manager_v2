@@ -26,14 +26,14 @@ func (c *controller) OAuthStart(platform string) (string, error) {
 	url := c.yahooConfig.AuthCodeURL(state)
 	c.oauthStates[state] = &oauthState{
 		platform: platform,
-		expiry:   time.Now().Add(5 * time.Minute),
+		expiry:   c.clock.Now().Add(5 * time.Minute),
 	}
 	return url, nil
 }
 
 func (c *controller) OAuthExchange(ctx context.Context, state, code string) error {
 	s, ok := c.oauthStates[state]
-	if !ok || time.Now().After(s.expiry) {
+	if !ok || c.clock.Now().After(s.expiry) {
 		return errors.New("state is not valid")
 	}
 
@@ -52,7 +52,7 @@ func (c *controller) OAuthExchange(ctx context.Context, state, code string) erro
 
 func (c *controller) OAuthRetrieve(state string) (*oauth2.Token, error) {
 	s, ok := c.oauthStates[state]
-	if !ok || time.Now().After(s.expiry) {
+	if !ok || c.clock.Now().After(s.expiry) {
 		return nil, errors.New("state parameter is not valid")
 	}
 
@@ -61,7 +61,7 @@ func (c *controller) OAuthRetrieve(state string) (*oauth2.Token, error) {
 
 func (c *controller) OAuthSave(ctx context.Context, state string, leagueID int32) error {
 	s, ok := c.oauthStates[state]
-	if !ok || time.Now().After(s.expiry) {
+	if !ok || c.clock.Now().After(s.expiry) {
 		return errors.New("state parameters is not valid")
 	}
 
@@ -80,7 +80,7 @@ func (c *controller) GetToken(ctx context.Context, leagueID int32) (*oauth2.Toke
 	// give us access to it.
 	// TODO: verify if this is still true, or if the library has been
 	// changed to remove this being necessary.
-	if t.Expiry.Before(time.Now()) {
+	if t.Expiry.Before(c.clock.Now()) {
 		log.Printf("refreshing token for league: %d", leagueID)
 		tknSrc := c.yahooConfig.TokenSource(ctx, t)
 
