@@ -2,7 +2,7 @@
   <form id="search" method="post" action="/leagues">
     <input type="hidden" id="platform" name="platform" value="{{ .platform }}" />
     <input type="hidden" id="year" name="year" value="{{ .year }}" />
-    <input type="hidden" id="state" name="state" value="unused" />
+    <input type="hidden" id="state" name="state" value="" />
     {{ range $l := .leagues }}
         <input type="radio" id="{{ $l.ExternalID }}" name="league" value="{{ $l.ExternalID }}"/>
         <label for="{{ $l.ExternalID }}">{{ $l.Name }}</label><br>
