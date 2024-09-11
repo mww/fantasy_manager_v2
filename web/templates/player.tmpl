@@ -59,7 +59,7 @@
 
       {{ range $s := .scores }}
         <table class="playerScores">
-          <tr><td colspan="100%">{{ $s.LeagueName }} ({{ $s.LeagueYear }})</td></tr>
+          <tr><td colspan="100%">{{ $s.LeagueName }} ({{ $s.LeagueYear }}) - <a href="/leagues/{{ $s.LeagueID }}">link</a></td></tr>
           <tr>
             <th>Week</th>
             <th>1</th>
@@ -103,6 +103,7 @@
             <td>{{ index $s.Scores 18 | score }}</td>
           </tr>
         </table>
+        <br/>
       {{ end }}
     {{ end }}
 
