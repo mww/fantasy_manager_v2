@@ -42,6 +42,8 @@ type C interface {
 	ListLeagues(ctx context.Context) ([]model.League, error)
 	ArchiveLeague(ctx context.Context, id int32) error
 	SyncResultsFromPlatform(ctx context.Context, leagueID int32, week int) error
+	// Return a slice of weeks for which there are results for the league
+	ListLeagueResultWeeks(ctx context.Context, leagueID int32) ([]int, error)
 	GetLeagueResults(ctx context.Context, leagueID int32, week int) ([]model.Matchup, error)
 
 	GetPowerRanking(ctx context.Context, leagueID, powerRankingID int32) (*model.PowerRanking, error)

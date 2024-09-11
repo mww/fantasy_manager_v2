@@ -681,6 +681,31 @@ func (db *postgresDB) GetResults(ctx context.Context, leagueID int32, week int) 
 	return results, nil
 }
 
+func (db *postgresDB) ListResultWeeks(ctx context.Context, leagueID int32) ([]int, error) {
+	const query = `SELECT DISTINCT(week) FROM team_results WHERE league_id=@id ORDER BY week`
+
+	args := pgx.NamedArgs{
+		"id": leagueID,
+	}
+	rows, err := db.pool.Query(ctx, query, args)
+	if err != nil {
+		return nil, fmt.Errorf("error querying team_results: %w", err)
+	}
+
+	results := make([]int, 0, 17)
+	for rows.Next() {
+		var i int
+		if err := rows.Scan(&i); err != nil {
+			return nil, fmt.Errorf("error scanning team_results row: %w", err)
+		}
+		results = append(results, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
 func (db *postgresDB) SavePowerRanking(ctx context.Context, leagueID int32, pr *model.PowerRanking) (int32, error) {
 	const insertPRQuery = `INSERT INTO power_rankings (league_id, ranking_id, week) 
 			VALUES (@leagueID, @rankingID, @week) RETURNING id`

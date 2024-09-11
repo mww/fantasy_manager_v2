@@ -224,7 +224,17 @@ func getLeagueHandler(ctrl controller.C, render *render.Render) http.HandlerFunc
 			return
 		}
 
-		render.HTML(w, http.StatusOK, "league", l)
+		resultWeeks, err := ctrl.ListLeagueResultWeeks(r.Context(), leagueID)
+		if err != nil {
+			log.Printf("error listing result weeks for league: %d", leagueID)
+			resultWeeks = make([]int, 0)
+		}
+
+		data := map[string]any{
+			"league":  l,
+			"results": resultWeeks,
+		}
+		render.HTML(w, http.StatusOK, "league", data)
 	}
 }
 

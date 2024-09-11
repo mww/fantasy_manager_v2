@@ -132,6 +132,10 @@ func (c *controller) SyncResultsFromPlatform(ctx context.Context, leagueID int32
 	return nil
 }
 
+func (c *controller) ListLeagueResultWeeks(ctx context.Context, leagueID int32) ([]int, error) {
+	return c.db.ListResultWeeks(ctx, leagueID)
+}
+
 func (c *controller) GetLeagueResults(ctx context.Context, leagueID int32, week int) ([]model.Matchup, error) {
 	return c.db.GetResults(ctx, leagueID, week)
 }

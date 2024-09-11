@@ -643,7 +643,7 @@ func TestLeagueManagers(t *testing.T) {
 	}
 }
 
-func TestSaveAndGetResults(t *testing.T) {
+func TestResults(t *testing.T) {
 	ctx := context.Background()
 	// A league and managers
 	l := getLeague()
@@ -731,6 +731,45 @@ func TestSaveAndGetResults(t *testing.T) {
 		default:
 			t.Fatalf("unexpected matchup result: %d", i)
 		}
+	}
+
+	// Add another weeks results so the list has a little bit more data
+	week5 := []model.Matchup{
+		{
+			MatchupID: 1,
+			Week:      5,
+			TeamA:     &model.TeamResult{TeamID: m1.ExternalID, Score: 100000},
+			TeamB:     &model.TeamResult{TeamID: m4.ExternalID, Score: 101000},
+		},
+		{
+			MatchupID: 2,
+			Week:      5,
+			TeamA:     &model.TeamResult{TeamID: m2.ExternalID, Score: 99100},
+			TeamB:     &model.TeamResult{TeamID: m3.ExternalID, Score: 103550},
+		},
+		{
+			MatchupID: 3,
+			Week:      5,
+			TeamA:     &model.TeamResult{TeamID: m2.ExternalID, Score: 100000},
+			TeamB:     &model.TeamResult{TeamID: m1.ExternalID, Score: 99100},
+		},
+		{
+			MatchupID: 4,
+			Week:      5,
+			TeamA:     &model.TeamResult{TeamID: m4.ExternalID, Score: 101000},
+			TeamB:     &model.TeamResult{TeamID: m3.ExternalID, Score: 103550},
+		},
+	}
+	if err := testDB.SaveResults(ctx, l.ID, week5); err != nil {
+		t.Fatalf("error saving week5 matchup results: %v", err)
+	}
+
+	weeks, err := testDB.ListResultWeeks(ctx, l.ID)
+	if err != nil {
+		t.Fatalf("unexpected error listing result weeks: %v", err)
+	}
+	if !reflect.DeepEqual(weeks, []int{2, 5}) {
+		t.Errorf("result weeks were not expected, got: %v", weeks)
 	}
 }
 

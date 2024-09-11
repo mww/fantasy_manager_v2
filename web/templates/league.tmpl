@@ -1,23 +1,63 @@
-<h1>{{ .Name }}</h1>
+<h1>{{ .league.Name }}</h1>
 
-<div>year: {{ .Year }}</div>
-<div>archived: {{ .Archived }}</div>
+<div>year: {{ .league.Year }}</div>
+<div>archived: {{ .league.Archived }}</div>
 
 <div id="managers">
   <h2>Managers</h2>
-  {{ if .Managers }}
+  {{ if .league.Managers }}
     <ul>
-      {{ range $m := .Managers }}
+      {{ range $m := .league.Managers }}
         <li>{{ $m.ManagerName }} {{ if $m.TeamName }}({{ $m.TeamName }}){{ end }}</li>
       {{ end }}
     </ul>
   {{ else }}
     <div>No managers found</div>
   {{ end }}
+
+  <div id="refreshManagers">
+    <form id="refreshmanagers" method="post" action="/leagues/{{ .league.ID }}/managers">
+      <div><input type="submit" value="Sync Managers" /></div>
+    </form>
+  </div>
 </div>
 
-<div class="syncResults">
-  <form id="syncResults" method="post" action="/leagues/{{ .ID }}/results/sync">
+{{ if .results }}
+<br/>
+<div id="results">
+  <table>
+    <tr><td colspan="100%">Results</td></tr>
+    <tr>
+      <th>Week 1</th>
+      <th>Week 2</th>
+      <th>Week 3</th>
+      <th>Week 4</th>
+      <th>Week 5</th>
+      <th>Week 6</th>
+      <th>Week 7</th>
+      <th>Week 8</th>
+      <th>Week 9</th>
+      <th>Week 10</th>
+      <th>Week 11</th>
+      <th>Week 12</th>
+      <th>Week 13</th>
+      <th>Week 14</th>
+      <th>Week 15</th>
+      <th>Week 16</th>
+      <th>Week 17</th>
+    </tr>
+    <tr>
+    {{ range $r := .results }}
+      <td><a href="/leagues/{{ $.league.ID }}/week/{{ $r }}">{{ $r }}</a>
+    {{ end }}
+    </tr>
+  </table>
+</div>
+{{ end }}
+
+<br/>
+<div id="syncResults">
+  <form id="syncResults" method="post" action="/leagues/{{ .league.ID }}/results/sync">
     <div>
       <label for="week">Select week:</label>
       <select name="week" id="week">
@@ -42,11 +82,5 @@
       </select>
     </div>
     <div><input type="submit" value="Sync Results" /></div>
-  </form>
-</div>
-
-<div class="refreshManagers">
-  <form id="refreshmanagers" method="post" action="/leagues/{{ .ID }}/managers">
-    <div><input type="submit" value="Sync Managers" /></div>
   </form>
 </div>

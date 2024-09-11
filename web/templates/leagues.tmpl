@@ -1,3 +1,18 @@
+<h1>Leagues</h1>
+
+{{ if . }}
+<div id="leagues">
+  <ul>
+    {{ range $l := . }}
+      <li><div><a href="/leagues/{{ $l.ID }}">{{ $l.Name }} ({{ $l.Year }})</a></div></li>
+    {{ end }}
+  </ul>
+</div>
+{{ end }}
+
+<hr/>
+
+<h2>Add new league</h2>
 <div class="addLeague">
   <form id="search" method="get" action="/leagues/platformLeagues">
       <div>
@@ -13,11 +28,3 @@
     <div><input type="submit" value="Next" /></div>
   </form>
 </div>
-
-{{ if . }}
-<div id="leagues">
-  {{ range $l := . }}
-    <div><a href="/leagues/{{ $l.ID }}">{{ $l.Name }} ({{ $l.Year }})</a></div>
-  {{ end }}
-</div>
-{{ end }}
