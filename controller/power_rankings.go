@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"log"
 	"math"
 	"slices"
 
@@ -36,8 +37,23 @@ func (c *controller) CalculatePowerRanking(ctx context.Context, leagueID, rankin
 		return 0, fmt.Errorf("error getting starters list for league %d: %w", l.ID, err)
 	}
 
+	weeklyResults := make(map[int][]model.Matchup)
+	for w := week; w > 0; w-- {
+		// only use a max of last 3 weeks of data
+		if len(weeklyResults) == 3 {
+			break
+		}
+		results, err := c.GetLeagueResults(ctx, leagueID, w)
+		if err != nil {
+			log.Printf("error getting results for league %d, week %d", leagueID, w)
+			continue
+		}
+		weeklyResults[w] = results
+	}
+
 	powerRanking := initializePowerRankings(rosters, ranking)
 	calculateRosterScores(powerRanking, starters)
+	calculateFantasyPointsScore(powerRanking, weeklyResults)
 	// Calculate more parts of the scores
 	sumFinalScore(powerRanking)
 
@@ -123,9 +139,55 @@ func calculateRosterScores(powerRanking *model.PowerRanking, starters []model.Ro
 	}
 }
 
+// Get the score for both points for and points against scored.
+func calculateFantasyPointsScore(pr *model.PowerRanking, weeklyResults map[int][]model.Matchup) {
+	type points struct {
+		pointsFor     int32
+		pointsAgainst int32
+		matches       int32
+	}
+	data := make(map[string]*points)
+
+	for _, matchups := range weeklyResults {
+		for _, m := range matchups {
+			a, found := data[m.TeamA.TeamID]
+			if !found {
+				a = &points{}
+				data[m.TeamA.TeamID] = a
+			}
+			b, found := data[m.TeamB.TeamID]
+			if !found {
+				b = &points{}
+				data[m.TeamB.TeamID] = b
+			}
+			a.pointsFor += m.TeamA.Score
+			a.pointsAgainst += m.TeamB.Score
+			a.matches += 1
+
+			b.pointsFor += m.TeamB.Score
+			b.pointsAgainst += m.TeamA.Score
+			b.matches += 1
+		}
+	}
+
+	for i := range pr.Teams {
+		p, found := data[pr.Teams[i].TeamID]
+		if !found {
+			log.Printf("did not find points data for team %s (%s)", pr.Teams[i].TeamID, pr.Teams[i].TeamName)
+			continue
+		}
+		pr.Teams[i].PointsForScore = (p.pointsFor / p.matches)
+		pr.Teams[i].PointsAgainstScore = int32(math.Round(0.3 * float64(p.pointsAgainst/p.matches))) // take 30% points against
+
+		// Since we store points * 1000 in the DB, divid by 1000 here to get back to normal
+		pr.Teams[i].PointsForScore /= 1000
+		pr.Teams[i].PointsAgainstScore /= 1000
+	}
+}
+
 func sumFinalScore(pr *model.PowerRanking) {
 	for i, t := range pr.Teams {
-		pr.Teams[i].TotalScore = t.RosterScore + t.RecordScore + t.StreakScore + t.PointForScore + t.PointsAgainstScore
+		pr.Teams[i].TotalScore = t.RosterScore + t.RecordScore + t.StreakScore + t.PointsForScore + t.PointsAgainstScore
 	}
 }
 

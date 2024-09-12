@@ -140,6 +140,77 @@ func TestCalculateRosterScores(t *testing.T) {
 	}
 }
 
+func TestCalculateFantasyPointsScore(t *testing.T) {
+	pr := &model.PowerRanking{
+		Teams: []model.TeamPowerRanking{
+			{TeamID: "1", TeamName: "AAA"},
+			{TeamID: "2", TeamName: "BBB"},
+			{TeamID: "3", TeamName: "CCC"},
+			{TeamID: "4", TeamName: "DDD"},
+		},
+	}
+
+	weeklyResults := map[int][]model.Matchup{
+		5: {
+			{
+				TeamA: &model.TeamResult{TeamID: "1", Score: 100000},
+				TeamB: &model.TeamResult{TeamID: "2", Score: 105000},
+			},
+			{
+				TeamA: &model.TeamResult{TeamID: "3", Score: 110000},
+				TeamB: &model.TeamResult{TeamID: "4", Score: 90000},
+			},
+		},
+		4: {
+			{
+				TeamA: &model.TeamResult{TeamID: "1", Score: 100000},
+				TeamB: &model.TeamResult{TeamID: "3", Score: 108000},
+			},
+			{
+				TeamA: &model.TeamResult{TeamID: "2", Score: 100000},
+				TeamB: &model.TeamResult{TeamID: "4", Score: 120000},
+			},
+		},
+		3: {
+			{
+				TeamA: &model.TeamResult{TeamID: "1", Score: 100000},
+				TeamB: &model.TeamResult{TeamID: "4", Score: 60000},
+			},
+			{
+				TeamA: &model.TeamResult{TeamID: "2", Score: 110000},
+				TeamB: &model.TeamResult{TeamID: "3", Score: 112000},
+			},
+		},
+	}
+
+	calculateFantasyPointsScore(pr, weeklyResults)
+
+	if pr.Teams[0].PointsForScore != 100 {
+		t.Errorf("expected team 1 to have points for of 100, got %d", pr.Teams[0].PointsForScore)
+	}
+	if pr.Teams[0].PointsAgainstScore != 27 {
+		t.Errorf("expected team 1 to have points against of 18, got %d", pr.Teams[0].PointsAgainstScore)
+	}
+	if pr.Teams[1].PointsForScore != 105 {
+		t.Errorf("expected team 2 to have points for of 105, got: %d", pr.Teams[1].PointsForScore)
+	}
+	if pr.Teams[1].PointsAgainstScore != 33 {
+		t.Errorf("expected team 2 to have points against of 33, got %d", pr.Teams[1].PointsAgainstScore)
+	}
+	if pr.Teams[2].PointsForScore != 110 {
+		t.Errorf("expected team 3 to have points for of 110, got: %d", pr.Teams[2].PointsForScore)
+	}
+	if pr.Teams[2].PointsAgainstScore != 30 {
+		t.Errorf("expected team 3 to have points against of 30, got %d", pr.Teams[2].PointsAgainstScore)
+	}
+	if pr.Teams[3].PointsForScore != 90 {
+		t.Errorf("expected team 4 to have points for of 90, got: %d", pr.Teams[3].PointsForScore)
+	}
+	if pr.Teams[3].PointsAgainstScore != 31 {
+		t.Errorf("expected team 4 to have points against of 31, got %d", pr.Teams[3].PointsAgainstScore)
+	}
+}
+
 func TestCalculateAndGetPowerRanking(t *testing.T) {
 	ctrl, testCtrl := controllerForTest()
 	defer testCtrl.Close()
@@ -173,8 +244,15 @@ func TestCalculateAndGetPowerRanking(t *testing.T) {
 		t.Fatalf("error adding ranking: %v", err)
 	}
 
+	// Save several weeks of results
+	for i := 1; i <= 5; i++ {
+		if err := ctrl.SyncResultsFromPlatform(ctx, l.ID, i); err != nil {
+			t.Fatalf("error getting week %d results: %v", i, err)
+		}
+	}
+
 	// Now that all of the setup is done, calculate and verify the power rankings.
-	prID, err := ctrl.CalculatePowerRanking(ctx, l.ID, rankingID, 0)
+	prID, err := ctrl.CalculatePowerRanking(ctx, l.ID, rankingID, 5)
 	if err != nil {
 		t.Fatalf("error calculating power ranking: %v", err)
 	}
@@ -253,6 +331,12 @@ func TestCalculateAndGetPowerRanking(t *testing.T) {
 		}
 		if e.Rank != a.Rank {
 			t.Errorf("expected Rank to be %d, but was %d", e.Rank, a.Rank)
+		}
+		if a.PointsForScore < 90 || a.PointsForScore > 120 {
+			t.Errorf("points for value is outside of expected range for team %d, got: %d", i, a.PointsForScore)
+		}
+		if a.PointsAgainstScore < 25 || a.PointsAgainstScore > 35 {
+			t.Errorf("points against value is outside of expected range for team %d, got: %d", i, a.PointsAgainstScore)
 		}
 
 		for j := range e.Roster {

@@ -784,7 +784,7 @@ func (db *postgresDB) SavePowerRanking(ctx context.Context, leagueID int32, pr *
 			"rosterScore":        t.RosterScore,
 			"recordScore":        t.RecordScore,
 			"streakScore":        t.StreakScore,
-			"pointsForScore":     t.PointForScore,
+			"pointsForScore":     t.PointsForScore,
 			"pointsAgainstScore": t.PointsAgainstScore,
 		}
 		if _, err := tx.Exec(ctx, insertTeamPowerRankingQuery, teamArgs); err != nil {
@@ -862,7 +862,7 @@ func (db *postgresDB) getPowerRankingTeams(ctx context.Context, pr *model.PowerR
 		var teamName, managerName string
 		err := rows.Scan(&t.TeamID, &teamName, &managerName, &t.Rank,
 			&t.RankChange, &t.TotalScore, &t.RosterScore, &t.RecordScore,
-			&t.StreakScore, &t.PointForScore, &t.PointsAgainstScore)
+			&t.StreakScore, &t.PointsForScore, &t.PointsAgainstScore)
 		if err != nil {
 			return fmt.Errorf("error scanning team result: %w", err)
 		}

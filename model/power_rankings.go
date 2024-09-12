@@ -18,7 +18,7 @@ type TeamPowerRanking struct {
 	RosterScore        int32
 	RecordScore        int32
 	StreakScore        int32
-	PointForScore      int32
+	PointsForScore     int32
 	PointsAgainstScore int32
 	Roster             []PowerRankingPlayer
 }
