@@ -773,7 +773,7 @@ func TestResults(t *testing.T) {
 	}
 }
 
-func TestGetAndCreatePowerRanking(t *testing.T) {
+func TestPowerRankings(t *testing.T) {
 	ctx := context.Background()
 	// A league
 	l := getLeague()
@@ -818,7 +818,7 @@ func TestGetAndCreatePowerRanking(t *testing.T) {
 		t.Fatalf("error adding ranking: %v", err)
 	}
 
-	pr := &model.PowerRanking{
+	pr1 := &model.PowerRanking{
 		RankingID: ranking.ID,
 		Week:      0,
 		Teams: []model.TeamPowerRanking{
@@ -868,14 +868,14 @@ func TestGetAndCreatePowerRanking(t *testing.T) {
 			},
 		},
 	}
-	id, err := testDB.SavePowerRanking(ctx, l.ID, pr)
+	id, err := testDB.SavePowerRanking(ctx, l.ID, pr1)
 	if err != nil {
-		t.Fatalf("error saving power ranking: %v", err)
+		t.Fatalf("error saving power ranking 1: %v", err)
 	}
 
 	res, err := testDB.GetPowerRanking(ctx, l.ID, id)
 	if err != nil {
-		t.Fatalf("error looking up power ranking: %v", err)
+		t.Fatalf("error looking up power ranking 1: %v", err)
 	}
 
 	if len(res.Teams) != 2 {
@@ -898,6 +898,96 @@ func TestGetAndCreatePowerRanking(t *testing.T) {
 	}
 	if res.Teams[1].Roster[0].PlayerID != p3.ID {
 		t.Errorf("Unexpected player at top of roster for team 1 - got %s, got %s", p3.ID, res.Teams[1].Roster[0].PlayerID)
+	}
+
+	// Add a second power rankings and then list them.
+	pr2 := &model.PowerRanking{
+		RankingID: ranking.ID,
+		Week:      1,
+		Teams: []model.TeamPowerRanking{
+			{
+				TeamID:      m2.ExternalID,
+				Rank:        1,
+				TotalScore:  11000,
+				RosterScore: 11000,
+				Roster: []model.PowerRankingPlayer{
+					{
+						PlayerID:           p3.ID,
+						Rank:               3,
+						NFLTeam:            model.TEAM_CAR,
+						PowerRankingPoints: 888,
+						IsStarter:          true,
+					},
+					{
+						PlayerID:           p4.ID,
+						Rank:               4,
+						NFLTeam:            model.TEAM_DAL,
+						PowerRankingPoints: 777,
+						IsStarter:          false,
+					},
+				},
+			},
+			{
+				TeamID:      m1.ExternalID,
+				Rank:        2,
+				TotalScore:  10111,
+				RosterScore: 10111,
+				Roster: []model.PowerRankingPlayer{
+					{
+						PlayerID:           p1.ID,
+						Rank:               1,
+						NFLTeam:            model.TEAM_ARI,
+						PowerRankingPoints: 1000,
+						IsStarter:          true,
+					},
+					{
+						PlayerID:           p2.ID,
+						Rank:               2,
+						NFLTeam:            model.TEAM_BUF,
+						PowerRankingPoints: 999,
+						IsStarter:          false,
+					},
+				},
+			},
+		},
+	}
+	if _, err := testDB.SavePowerRanking(ctx, l.ID, pr2); err != nil {
+		t.Fatalf("error saving power ranking 2: %v", err)
+	}
+
+	rankings, err := testDB.ListPowerRankings(ctx, l.ID)
+	if err != nil {
+		t.Fatalf("error listing power rankings: %v", err)
+	}
+
+	if len(rankings) != 2 {
+		t.Errorf("expected 2 power rankings, got %d", len(rankings))
+	}
+	if rankings[0].Week != 1 {
+		t.Errorf("expected first power rankings to have week=1, got: %d", rankings[0].Week)
+	}
+	if rankings[1].Week != 0 {
+		t.Errorf("expected second power rankings to have week=1, got: %d", rankings[1].Week)
+	}
+}
+
+func TestPowerRankings_leagueWithNoRankings(t *testing.T) {
+	ctx := context.Background()
+	// A league
+	l := getLeague()
+	if err := testDB.AddLeague(ctx, l); err != nil {
+		t.Fatalf("error adding league: %v", err)
+	}
+	defer func() {
+		testDB.ArchiveLeague(ctx, l.ID) // Clean up after the test
+	}()
+
+	rankings, err := testDB.ListPowerRankings(ctx, l.ID)
+	if err != nil {
+		t.Fatalf("unexpected error listing rankings: %v", err)
+	}
+	if len(rankings) != 0 {
+		t.Fatalf("expected 0 rankings, but got %d", len(rankings))
 	}
 }
 

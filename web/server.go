@@ -65,11 +65,12 @@ func newRender() *render.Render {
 		},
 		Funcs: []template.FuncMap{
 			{
-				"age":    ageFormatter,
-				"date":   dateFormatter,
-				"height": heightFormatter,
-				"year":   yearFormatter,
-				"score":  scoreFormatter,
+				"age":      ageFormatter,
+				"date":     dateFormatter,
+				"height":   heightFormatter,
+				"year":     yearFormatter,
+				"score":    scoreFormatter,
+				"dateTime": dateTimeFormatter,
 			},
 		},
 	})
@@ -111,6 +112,13 @@ func yearFormatter(t time.Time) string {
 		return "Unknown"
 	}
 	return t.Format("2006")
+}
+
+func dateTimeFormatter(t time.Time) string {
+	if t.IsZero() {
+		return "Unknown"
+	}
+	return t.Format(time.DateTime)
 }
 
 func scoreFormatter(s int32) string {

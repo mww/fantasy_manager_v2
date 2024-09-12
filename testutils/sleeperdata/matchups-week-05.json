@@ -1,0 +1,85 @@
+[
+    {
+      "points": 96.72,
+      "players": [
+        "8188",
+        "6806",
+        "6819"
+      ],
+      "roster_id": 1,
+      "custom_points": null,
+      "matchup_id": 21,
+      "starters": [
+        "7523"
+      ],
+      "starters_points": [
+        17.74
+      ],
+      "players_points": {
+        "7601": 16.42,
+        "8154": 10.66,
+        "8408": 17.90
+      }
+    },
+    {
+      "points": 80.56,
+      "players": [
+        "10871"
+      ],
+      "roster_id": 4,
+      "custom_points": null,
+      "matchup_id": 23,
+      "starters": [
+        "6904"
+      ],
+      "starters_points": [
+        12.5
+      ],
+      "players_points": {
+        "3225": 25.30,
+        "4198": 2.80,
+        "4993": 11.90
+      }
+    },
+    {
+      "points": 72.68,
+      "players": [
+        "10219"
+      ],
+      "roster_id": 6,
+      "custom_points": null,
+      "matchup_id": 21,
+      "starters": [
+        "6797"
+      ],
+      "starters_points": [
+        20.86
+      ],
+      "players_points": {
+        "10219": 11.10,
+        "10222": 7.50,
+        "10223": 20.40
+      }
+    },
+    {
+      "points": 81.18,
+      "players": [
+        "11370"
+      ],
+      "roster_id": 7,
+      "custom_points": null,
+      "matchup_id": 23,
+      "starters": [
+        "4046"
+      ],
+      "starters_points": [
+        19.54
+      ],
+      "players_points": {
+        "11370": 7.40,
+        "11439": 6.70,
+        "1352": 10.10
+      }
+    }
+  ]
+  

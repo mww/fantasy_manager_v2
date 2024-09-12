@@ -112,8 +112,8 @@ func leagueMatchupsHandlers(w http.ResponseWriter, r *http.Request) {
 	leagueID := chi.URLParam(r, "leagueID")
 	if leagueID == SleeperLeagueID {
 		if week, err := strconv.Atoi(chi.URLParam(r, "week")); err == nil {
-			if week == 1 {
-				serveSleeperFile(w, "matchups-week-01.json")
+			if week <= 5 && week >= 1 {
+				serveSleeperFile(w, fmt.Sprintf("matchups-week-%02d.json", week))
 				return
 			}
 		} else {
