@@ -51,14 +51,16 @@ func TestInitalizePowerRankings(t *testing.T) {
 			"10": {Rank: 10, ID: "10"},
 		},
 	}
+	week := 3
 
-	pr := initializePowerRankings(rosters, ranking)
+	pr := initializePowerRankings(rosters, ranking, week)
 	if len(pr.Teams) != len(rosters) {
 		t.Errorf("expected result to have %d teams, but was %d", len(rosters), len(pr.Teams))
 	}
 
 	expected := &model.PowerRanking{
 		RankingID: ranking.ID,
+		Week:      int16(week),
 		Teams: []model.TeamPowerRanking{
 			{
 				TeamID: r1.TeamID,
@@ -251,8 +253,9 @@ func TestCalculateAndGetPowerRanking(t *testing.T) {
 		}
 	}
 
+	const week = 5
 	// Now that all of the setup is done, calculate and verify the power rankings.
-	prID, err := ctrl.CalculatePowerRanking(ctx, l.ID, rankingID, 5)
+	prID, err := ctrl.CalculatePowerRanking(ctx, l.ID, rankingID, week)
 	if err != nil {
 		t.Fatalf("error calculating power ranking: %v", err)
 	}
@@ -317,6 +320,10 @@ func TestCalculateAndGetPowerRanking(t *testing.T) {
 				},
 			},
 		},
+	}
+
+	if pr.Week != week {
+		t.Errorf("expected pr.Week to be %d, but was %d", week, pr.Week)
 	}
 
 	for i := range expected.Teams {

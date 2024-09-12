@@ -1,4 +1,4 @@
-<h1>{{ .league.Name }} ({{ .league.Year }}</h1>
+<h1>{{ .league.Name }} ({{ .league.Year }})</h1>
 
 <div>Week: {{ .power.Week }}</div>
 <div><a href="/players/rankings/{{ .power.RankingID }}">Player Rankings Used</a></div>
@@ -8,15 +8,25 @@
         <th>Rank</th>
         <th>Team</th>
         <th>Score</th>
+        <th>Roster</th>
+        <th>Points For</th>
+        <th>Points Against</th>
     </tr>
     {{ range $t := .power.Teams }}
         <tr>
             <td>{{ $t.Rank }}</td>
             <td>{{ $t.TeamName }}</td>
             <td>{{ $t.TotalScore }}</td>
+            <td>{{ $t.RosterScore }}</td>
+            <td>{{ $t.PointsForScore }}</td>
+            <td>{{ $t.PointsAgainstScore }}</td>
         </tr>
     {{ end }}
 </table>
+
+<div>
+    <a href="/leagues/{{ .league.ID }}/power/{{ .power.ID }}/text">text version</a>
+</div>
 
 {{ range $t := .power.Teams }}
 <div>

@@ -51,7 +51,7 @@ func (c *controller) CalculatePowerRanking(ctx context.Context, leagueID, rankin
 		weeklyResults[w] = results
 	}
 
-	powerRanking := initializePowerRankings(rosters, ranking)
+	powerRanking := initializePowerRankings(rosters, ranking, week)
 	calculateRosterScores(powerRanking, starters)
 	calculateFantasyPointsScore(powerRanking, weeklyResults)
 	// Calculate more parts of the scores
@@ -74,10 +74,11 @@ func (c *controller) CalculatePowerRanking(ctx context.Context, leagueID, rankin
 	return id, nil
 }
 
-func initializePowerRankings(rosters []model.Roster, ranking *model.Ranking) *model.PowerRanking {
+func initializePowerRankings(rosters []model.Roster, ranking *model.Ranking, week int) *model.PowerRanking {
 	powerRanking := &model.PowerRanking{
 		RankingID: ranking.ID,
 		Teams:     make([]model.TeamPowerRanking, 0, len(rosters)),
+		Week:      int16(week),
 	}
 	for _, r := range rosters {
 		pr := model.TeamPowerRanking{
