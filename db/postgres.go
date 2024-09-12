@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"slices"
 	"strings"
 	"time"
@@ -816,7 +817,7 @@ func (db *postgresDB) SavePowerRanking(ctx context.Context, leagueID int32, pr *
 }
 
 func (db *postgresDB) GetPowerRanking(ctx context.Context, leagueID, powerRankingID int32) (*model.PowerRanking, error) {
-	const prQuery = `SELECT ranking_id, week FROM power_rankings WHERE id=@id AND league_id=@leagueID`
+	const prQuery = `SELECT ranking_id, week, created FROM power_rankings WHERE id=@id AND league_id=@leagueID`
 
 	pr := model.PowerRanking{
 		ID: powerRankingID,
@@ -825,15 +826,52 @@ func (db *postgresDB) GetPowerRanking(ctx context.Context, leagueID, powerRankin
 		"id":       powerRankingID,
 		"leagueID": leagueID,
 	}
-	if err := db.pool.QueryRow(ctx, prQuery, args).Scan(&pr.RankingID, &pr.Week); err != nil {
+	var created pgtype.Timestamptz
+	if err := db.pool.QueryRow(ctx, prQuery, args).Scan(&pr.RankingID, &pr.Week, &created); err != nil {
 		return nil, fmt.Errorf("error querying by power ranking id: %w", err)
 	}
+	pr.Created = created.Time
 
 	if err := db.getPowerRankingTeams(ctx, &pr, leagueID); err != nil {
 		return nil, err
 	}
 
 	return &pr, nil
+}
+
+func (db *postgresDB) ListPowerRankings(ctx context.Context, leagueID int32) ([]model.PowerRanking, error) {
+	const query = `SELECT id, week, created FROM power_Rankings WHERE league_id=@leagueID ORDER BY week DESC, created DESC`
+
+	results := make([]model.PowerRanking, 0)
+
+	args := pgx.NamedArgs{"leagueID": leagueID}
+	rows, err := db.pool.Query(ctx, query, args)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			log.Printf("1 - no power rankings for league %d", leagueID)
+			return results, nil
+		}
+		return nil, fmt.Errorf("error listing power rankings for league %d: %w", leagueID, err)
+	}
+
+	for rows.Next() {
+		var pr model.PowerRanking
+		var created pgtype.Timestamptz
+		if err := rows.Scan(&pr.ID, &pr.Week, &created); err != nil {
+			return nil, fmt.Errorf("error scanning power ranking for league %d: %w", leagueID, err)
+		}
+		pr.Created = created.Time
+
+		results = append(results, pr)
+	}
+	if err := rows.Err(); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			log.Printf("2 - no power rankings for league %d", leagueID)
+			return results, nil
+		}
+	}
+
+	return results, nil
 }
 
 func (db *postgresDB) getPowerRankingTeams(ctx context.Context, pr *model.PowerRanking, leagueID int32) error {

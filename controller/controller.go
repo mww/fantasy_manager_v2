@@ -46,6 +46,7 @@ type C interface {
 	ListLeagueResultWeeks(ctx context.Context, leagueID int32) ([]int, error)
 	GetLeagueResults(ctx context.Context, leagueID int32, week int) ([]model.Matchup, error)
 
+	ListPowerRankings(ctx context.Context, leagueID int32) ([]model.PowerRanking, error)
 	GetPowerRanking(ctx context.Context, leagueID, powerRankingID int32) (*model.PowerRanking, error)
 	// Calculates the power ranking and returns the id of the saved rankings
 	CalculatePowerRanking(ctx context.Context, leagueID, rankingID int32, week int) (int32, error)

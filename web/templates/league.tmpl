@@ -22,7 +22,6 @@
   </div>
 </div>
 
-{{ if .results }}
 <br/>
 <div id="results">
   <table>
@@ -46,14 +45,15 @@
       <th>Week 16</th>
       <th>Week 17</th>
     </tr>
-    <tr>
-    {{ range $r := .results }}
-      <td><a href="/leagues/{{ $.league.ID }}/week/{{ $r }}">{{ $r }}</a>
+    {{ if .results }}
+      <tr>
+      {{ range $r := .results }}
+        <td><a href="/leagues/{{ $.league.ID }}/week/{{ $r }}">{{ $r }}</a>
+      {{ end }}
+      </tr>
     {{ end }}
-    </tr>
   </table>
 </div>
-{{ end }}
 
 <br/>
 <div id="syncResults">
@@ -82,5 +82,57 @@
       </select>
     </div>
     <div><input type="submit" value="Sync Results" /></div>
+  </form>
+</div>
+
+<br/>
+<div id="powerRankings">
+  <h2>Power Rankings</h2>
+  {{ if .powerRankings }}
+  <ul>
+    {{ range $pr := .powerRankings }}
+      <li><a href="/leagues/{{ $.league.ID }}/power/{{ $pr.ID }}">Week {{ $pr.Week }}</a> created at: {{ $pr.Created | dateTime }}</li>
+    {{ end }}
+  </ul>
+  {{ end }}
+</div>
+
+<br/>
+<div id="create-powerranking">
+  <form id="create-powerranking" method="post" action="/leagues/{{ .leagueID }}/power">
+    <div>
+      <label for="rankings">Select ranking to use</label>
+      <select name="ranking" id="ranking">
+        {{ range $r := .rankings }}
+          <option value="{{ $r.ID }}">{{ $r.Date | date }}</option>
+        {{ end }}
+      </select>
+    </div>
+    <div>
+      <label for="week">Select week to generate rankings for</label>
+      <select name="week" id="week">
+        <option value="0">Preseason</option>
+        <option value="1">Week 1</option>
+        <option value="2">Week 2</option>
+        <option value="3">Week 3</option>
+        <option value="4">Week 4</option>
+        <option value="5">Week 5</option>
+        <option value="6">Week 6</option>
+        <option value="7">Week 7</option>
+        <option value="8">Week 8</option>
+        <option value="9">Week 9</option>
+        <option value="10">Week 10</option>
+        <option value="11">Week 11</option>
+        <option value="12">Week 12</option>
+        <option value="13">Week 13</option>
+        <option value="14">Week 14</option>
+        <option value="15">Week 15</option>
+        <option value="16">Week 16</option>
+        <option value="17">Week 17</option>
+      </select>
+    </div>
+    <div>
+      <input type="submit" value="Create Power Ranking" />
+    </div>
   </form>
 </div>

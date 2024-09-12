@@ -231,9 +231,24 @@ func getLeagueHandler(ctrl controller.C, render *render.Render) http.HandlerFunc
 			resultWeeks = make([]int, 0)
 		}
 
+		powerRankings, err := ctrl.ListPowerRankings(r.Context(), leagueID)
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err)
+			return
+		}
+
+		// List the rankings so we can create a new power ranking if wanted
+		rankings, err := ctrl.ListRankings(r.Context())
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err)
+			return
+		}
+
 		data := map[string]any{
-			"league":  l,
-			"results": resultWeeks,
+			"league":        l,
+			"results":       resultWeeks,
+			"powerRankings": powerRankings,
+			"rankings":      rankings,
 		}
 		render.HTML(w, http.StatusOK, "league", data)
 	}
@@ -321,27 +336,6 @@ func getLeagueResultsHandler(ctrl controller.C, render *render.Render) http.Hand
 			"week":     week,
 		}
 		render.HTML(w, http.StatusOK, "leagueResults", data)
-	}
-}
-
-func getPowerRankingsHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		leagueID, err := getID(r, "leagueID")
-		if err != nil {
-			render.HTML(w, http.StatusBadRequest, "400", err)
-			return
-		}
-
-		rankings, err := ctrl.ListRankings(r.Context())
-		if err != nil {
-			render.HTML(w, http.StatusInternalServerError, "500", err)
-		}
-
-		data := map[string]any{
-			"leagueID": leagueID,
-			"rankings": rankings,
-		}
-		render.HTML(w, http.StatusOK, "powerRankingsRoot", data)
 	}
 }
 

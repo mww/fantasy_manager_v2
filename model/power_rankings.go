@@ -1,12 +1,16 @@
 package model
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 type PowerRanking struct {
 	ID        int32
 	RankingID int32 // The ID of the ranking data to use
 	Week      int16 // week used to calculate win/loss and streaks
 	Teams     []TeamPowerRanking
+	Created   time.Time
 }
 
 type TeamPowerRanking struct {

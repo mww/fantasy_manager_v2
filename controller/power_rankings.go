@@ -10,6 +10,10 @@ import (
 	"github.com/mww/fantasy_manager_v2/model"
 )
 
+func (c *controller) ListPowerRankings(ctx context.Context, leagueID int32) ([]model.PowerRanking, error) {
+	return c.db.ListPowerRankings(ctx, leagueID)
+}
+
 func (c *controller) GetPowerRanking(ctx context.Context, leagueID, powerRankingID int32) (*model.PowerRanking, error) {
 	return c.db.GetPowerRanking(ctx, leagueID, powerRankingID)
 }
