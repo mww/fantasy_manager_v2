@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mww/fantasy_manager_v2/model"
+	"github.com/mww/fantasy_manager_v2/platforms/yahoo/internal"
 	"github.com/mww/fantasy_manager_v2/testutils"
 )
 
@@ -164,5 +165,31 @@ func TestGetRoster(t *testing.T) {
 
 	if !reflect.DeepEqual(expected, roster) {
 		t.Errorf("expected: %v, got: %v", expected, roster)
+	}
+}
+
+func TestValidateTeams(t *testing.T) {
+	if err := validateTeams(nil); err == nil {
+		t.Errorf("expected an error when teams==nil")
+	}
+
+	teams := &internal.Teams{
+		Teams: []internal.Team{
+			{Key: "1", TeamPoints: nil},
+			{Key: "2", TeamPoints: &internal.TeamPoints{Total: 100.01}},
+		},
+	}
+	if err := validateTeams(teams); err == nil {
+		t.Errorf("expected an error when TeamPoints==nil")
+	}
+
+	teamsValid := &internal.Teams{
+		Teams: []internal.Team{
+			{Key: "1", TeamPoints: &internal.TeamPoints{Total: 99.99}},
+			{Key: "2", TeamPoints: &internal.TeamPoints{Total: 100.01}},
+		},
+	}
+	if err := validateTeams(teamsValid); err != nil {
+		t.Errorf("unexpected error validating teams: %v", err)
 	}
 }
