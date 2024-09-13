@@ -26,7 +26,7 @@ func (c *controller) CalculatePowerRanking(ctx context.Context, leagueID, rankin
 
 	adaptor := getPlatformAdapter(l.Platform, c)
 
-	rosters, err := adaptor.getRosters(l)
+	rosters, err := adaptor.getRosters(ctx, l)
 	if err != nil {
 		return 0, fmt.Errorf("error getting league rosters: %w", err)
 	}
@@ -36,7 +36,7 @@ func (c *controller) CalculatePowerRanking(ctx context.Context, leagueID, rankin
 		return 0, fmt.Errorf("error getting ranking with id %d: %w", rankingID, err)
 	}
 
-	starters, err := adaptor.getStarters(l)
+	starters, err := adaptor.getStarters(ctx, l)
 	if err != nil {
 		return 0, fmt.Errorf("error getting starters list for league %d: %w", l.ID, err)
 	}

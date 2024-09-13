@@ -104,10 +104,10 @@ type platformAdpater interface {
 	getLeagueName(ctx context.Context, leagueID, stateToken string) (string, error)
 	getManagers(ctx context.Context, l *model.League) ([]model.LeagueManager, error)
 	sortManagers(m []model.LeagueManager)
-	getMatchupResults(l *model.League, week int) ([]model.Matchup, []model.PlayerScore, error)
-	getRosters(l *model.League) ([]model.Roster, error)
+	getMatchupResults(ctx context.Context, l *model.League, week int) ([]model.Matchup, []model.PlayerScore, error)
+	getRosters(ctx context.Context, l *model.League) ([]model.Roster, error)
 	// Get all the starting roster spots. This is used in the power rankings calculations.
-	getStarters(l *model.League) ([]model.RosterSpot, error)
+	getStarters(ctx context.Context, l *model.League) ([]model.RosterSpot, error)
 }
 
 func getPlatformAdapter(platform string, c *controller) platformAdpater {
@@ -142,14 +142,14 @@ func (a *nilPlatformAdapter) getManagers(ctx context.Context, l *model.League) (
 func (a *nilPlatformAdapter) sortManagers(m []model.LeagueManager) {
 }
 
-func (a *nilPlatformAdapter) getMatchupResults(l *model.League, week int) ([]model.Matchup, []model.PlayerScore, error) {
+func (a *nilPlatformAdapter) getMatchupResults(ctx context.Context, l *model.League, week int) ([]model.Matchup, []model.PlayerScore, error) {
 	return nil, nil, a.err
 }
 
-func (a *nilPlatformAdapter) getRosters(l *model.League) ([]model.Roster, error) {
+func (a *nilPlatformAdapter) getRosters(ctx context.Context, l *model.League) ([]model.Roster, error) {
 	return nil, a.err
 }
 
-func (a *nilPlatformAdapter) getStarters(l *model.League) ([]model.RosterSpot, error) {
+func (a *nilPlatformAdapter) getStarters(ctx context.Context, l *model.League) ([]model.RosterSpot, error) {
 	return nil, a.err
 }

@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -86,4 +87,20 @@ type SeasonScores struct {
 	LeagueYear string
 	PlayerID   string
 	Scores     []int32
+}
+
+// Take a full name, like "Deebo Samuel Sr."" and return "Deebo Samuel".
+func TrimNameSuffix(fullName string) string {
+	suffixList := []string{
+		"Jr.",
+		"Sr.",
+		"II",
+		"IV",
+	}
+
+	for _, s := range suffixList {
+		fullName = strings.TrimSuffix(fullName, s)
+	}
+
+	return strings.TrimSpace(fullName)
 }

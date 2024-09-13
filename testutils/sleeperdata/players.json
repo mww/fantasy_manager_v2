@@ -88,7 +88,8 @@
         "first_name": "Zach",
         "last_name": "Ertz",
         "position": "TE",
-        "team": "WAS"
+        "team": "WAS",
+        "yahoo_id": 26658
     },
     "1379": {
         "rotowire_id": 8930,
@@ -152,7 +153,8 @@
         "first_name": "Robert",
         "last_name": "Woods",
         "position": "WR",
-        "team": "HOU"
+        "team": "HOU",
+        "yahoo_id": 26664
     },
     "1466": {
         "player_id": "1466",
@@ -173,7 +175,8 @@
         "first_name": "Allen",
         "last_name": "Robinson",
         "position": "WR",
-        "team": "DET"
+        "team": "DET",
+        "yahoo_id": 27589
     },
     "2078": {
         "player_id": "2078",
@@ -277,7 +280,8 @@
         "first_name": "Tyler",
         "last_name": "Boyd",
         "position": "WR",
-        "team": "TEN"
+        "team": "TEN",
+        "yahoo_id": 29288
     },
     "4080": {
         "player_id": "4080",
@@ -298,7 +302,8 @@
         "first_name": "Mike",
         "last_name": "Gesicki",
         "position": "TE",
-        "team": "CIN"
+        "team": "CIN",
+        "yahoo_id": 31012
     },
     "6904": {
         "weight": "223",

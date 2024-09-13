@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fantasy_content xml:lang="en-US" yahoo:uri="http://fantasysports.yahooapis.com/fantasy/v2/team/449.l.149976.t.10/roster;week=1" time="49.588203430176ms" copyright="Certain Data by Sportradar, Stats Perform and Rotowire" refresh_rate="60" xmlns:yahoo="http://www.yahooapis.com/v1/base.rng" xmlns="http://fantasysports.yahooapis.com/fantasy/v2/base.rng">
+    <team>
+        <team_key>223.l.431.t.5</team_key>
+        <team_id>5</team_id>
+        <name>RotoExperts</name>
+        <is_owned_by_current_login>1</is_owned_by_current_login>
+        <url>https://football.fantasysports.yahoo.com/f1/149976/10</url>
+        <team_logos>
+            <team_logo>
+                <size>large</size>
+                <url>https://s.yimg.com/cv/apiv2/default/nfl/nfl_5.png</url>
+            </team_logo>
+        </team_logos>
+        <waiver_priority>2</waiver_priority>
+        <faab_balance>89</faab_balance>
+        <number_of_moves>3</number_of_moves>
+        <number_of_trades>0</number_of_trades>
+        <roster_adds>
+            <coverage_type>week</coverage_type>
+            <coverage_value>2</coverage_value>
+            <value>2</value>
+        </roster_adds>
+        <league_scoring_type>head</league_scoring_type>
+        <has_draft_grade>1</has_draft_grade>
+        <draft_grade>D-</draft_grade>
+        <draft_recap_url>https://football.fantasysports.yahoo.com/f1/149976/10/draftrecap</draft_recap_url>
+        <managers>
+        </managers>
+        <roster>
+            <coverage_type>week</coverage_type>
+            <week>1</week>
+            <is_prescoring>0</is_prescoring>
+            <is_editable>0</is_editable>
+            <players count="3">
+                <player>
+                    <player_key>449.p.25812</player_key>
+                    <player_id>25812</player_id>
+                    <name>
+                        <full>Kirk Cousins</full>
+                        <first>Kirk</first>
+                        <last>Cousins</last>
+                        <ascii_first>Kirk</ascii_first>
+                        <ascii_last>Cousins</ascii_last>
+                    </name>
+                    <primary_position>QB</primary_position>
+                </player>
+                <player>
+                    <player_key>449.p.26658</player_key>
+                    <player_id>26658</player_id>
+                    <name>
+                        <full>Zach Ertz</full>
+                        <first>Zach</first>
+                        <last>Ertz</last>
+                        <ascii_first>Zach</ascii_first>
+                        <ascii_last>Ertz</ascii_last>
+                    </name>
+                    <primary_position>TE</primary_position>
+                </player>
+                <player>
+                    <player_key>449.p.26664</player_key>
+                    <player_id>26664</player_id>
+                    <name>
+                        <full>Robert Woods</full>
+                        <first>Robert</first>
+                        <last>Woods</last>
+                        <ascii_first>Robert</ascii_first>
+                        <ascii_last>Woods</ascii_last>
+                    </name>
+                    <primary_position>WR</primary_position>
+                </player>
+            </players>
+        </roster>
+    </team>
+</fantasy_content>
+<!-- fantasy-sports-api- -public-production-bf1-68df79b7f-7zwkd Thu Sep 12 20:58:56 UTC 2024 -->

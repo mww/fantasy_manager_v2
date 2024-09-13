@@ -47,6 +47,7 @@ func controllerForTest() (C, *testutils.TestController) {
 
 // Add some test coverage for nilPlatformAdapter to meet file level code coverage requirements
 func TestNilPlatformAdapter(t *testing.T) {
+	ctx := context.Background()
 	expectedErr := errors.New("expected error")
 	a := &nilPlatformAdapter{err: expectedErr}
 
@@ -55,27 +56,27 @@ func TestNilPlatformAdapter(t *testing.T) {
 		t.Error("getLeagues did not return expected response")
 	}
 
-	_, err = a.getLeagueName(context.Background(), "", "")
+	_, err = a.getLeagueName(ctx, "", "")
 	if !errors.Is(err, expectedErr) {
 		t.Error("getLeagueName did not return expected response")
 	}
 
-	_, err = a.getManagers(context.Background(), nil)
+	_, err = a.getManagers(ctx, nil)
 	if !errors.Is(err, expectedErr) {
 		t.Error("getManagers did not return expected response")
 	}
 
-	_, _, err = a.getMatchupResults(nil, 0)
+	_, _, err = a.getMatchupResults(ctx, nil, 0)
 	if !errors.Is(err, expectedErr) {
 		t.Error("getMatchupResults did not return expected response")
 	}
 
-	_, err = a.getRosters(nil)
+	_, err = a.getRosters(ctx, nil)
 	if !errors.Is(err, expectedErr) {
 		t.Error("getRosters did not return expected response")
 	}
 
-	_, err = a.getStarters(nil)
+	_, err = a.getStarters(ctx, nil)
 	if !errors.Is(err, expectedErr) {
 		t.Error("getStarters did not return expected response")
 	}

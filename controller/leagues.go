@@ -116,7 +116,7 @@ func (c *controller) SyncResultsFromPlatform(ctx context.Context, leagueID int32
 		return fmt.Errorf("error loading league managers: %w", err)
 	}
 
-	matchups, scores, err := getPlatformAdapter(l.Platform, c).getMatchupResults(l, week)
+	matchups, scores, err := getPlatformAdapter(l.Platform, c).getMatchupResults(ctx, l, week)
 	if err != nil {
 		return fmt.Errorf("error getting matchup results: %w", err)
 	}

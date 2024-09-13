@@ -991,6 +991,79 @@ func TestPowerRankings_leagueWithNoRankings(t *testing.T) {
 	}
 }
 
+func TestConvertYahooPlayerIDs(t *testing.T) {
+	ctx := context.Background()
+
+	// Insert several players with specific IDs so that they are always consistent and we can count on
+	// unique results when searching for them. These are also all players found in dleeperdata/players.json file
+	players := []model.Player{
+		{ID: "1166", YahooID: "", FirstName: "Kirk", LastName: "Cousins", Position: model.POS_QB, Team: model.TEAM_ATL},
+		{ID: "1339", YahooID: "26658", FirstName: "Zach", LastName: "Ertz", Position: model.POS_TE, Team: model.TEAM_WAS},
+		{ID: "1352", YahooID: "26664", FirstName: "Robert", LastName: "Woods", Position: model.POS_WR, Team: model.TEAM_HOU},
+		{ID: "1992", YahooID: "27589", FirstName: "Allen", LastName: "Robinson", Position: model.POS_WR, Team: model.TEAM_DET},
+		{ID: "2216", YahooID: "", FirstName: "Mike", LastName: "Evans", Position: model.POS_WR, Team: model.TEAM_TBB},
+		{ID: "2359", YahooID: "", FirstName: "Ameer", LastName: "Abdullah", Position: model.POS_RB, Team: model.TEAM_LVR},
+		{ID: "3225", YahooID: "29288", FirstName: "Tyler", LastName: "Boyd", Position: model.POS_WR, Team: model.TEAM_TEN},
+		{ID: "4080", YahooID: "", FirstName: "Zay", LastName: "Jones", Position: model.POS_WR, Team: model.TEAM_ARI},
+		{ID: "4993", YahooID: "31012", FirstName: "Mike", LastName: "Gesicki", Position: model.POS_TE, Team: model.TEAM_CIN},
+		{ID: "7601", YahooID: "", FirstName: "Rondale", LastName: "Moore", Position: model.POS_WR, Team: model.TEAM_ATL},
+		{ID: "8154", YahooID: "", FirstName: "Brian", LastName: "Robinson", Position: model.POS_RB, Team: model.TEAM_WAS},
+		{ID: "10219", YahooID: "", FirstName: "Chris", LastName: "Rodriguez", Position: model.POS_RB, Team: model.TEAM_WAS},
+		{ID: "SEA", YahooID: "", FirstName: "Seattle", Position: model.POS_DEF, Team: model.TEAM_SEA},
+
+		// These players have duplicate yahoo ids and are not used in the main test
+		{ID: "10225", YahooID: "40073", FirstName: "Jonathan", LastName: "Mingo", Position: model.POS_WR, Team: model.TEAM_CAR},
+		{ID: "10444", YahooID: "40073", FirstName: "Cedric", LastName: "Tillman", Position: model.POS_WR, Team: model.TEAM_CLE},
+	}
+
+	for _, p := range players {
+		if err := testDB.SavePlayer(ctx, &p); err != nil {
+			t.Fatalf("error saving player: %v", err)
+		}
+	}
+
+	input := []model.YahooPlayer{
+		{YahooID: "25812", FirstName: "Kirk", LastName: "Cousins", Pos: model.POS_QB},
+		{YahooID: "26658", FirstName: "Zach", LastName: "Ertz", Pos: model.POS_TE},
+		{YahooID: "26664", FirstName: "Robert", LastName: "Woods", Pos: model.POS_WR},
+		{YahooID: "27589", FirstName: "Allen", LastName: "Robinson", Pos: model.POS_WR},
+		{YahooID: "27535", FirstName: "Mike", LastName: "Evans", Pos: model.POS_WR},
+		{YahooID: "28442", FirstName: "Ameer", LastName: "Abdullah", Pos: model.POS_RB},
+		{YahooID: "29288", FirstName: "Tyler", LastName: "Boyd", Pos: model.POS_WR},
+		{YahooID: "30150", FirstName: "Zay", LastName: "Jones", Pos: model.POS_WR},
+		{YahooID: "31012", FirstName: "Mike", LastName: "Gesicki", Pos: model.POS_TE},
+		{YahooID: "33437", FirstName: "Rondale", LastName: "Moore", Pos: model.POS_WR},
+		{YahooID: "34054", FirstName: "Brian", LastName: "Robinson", Pos: model.POS_RB},
+		{YahooID: "40231", FirstName: "Chris", LastName: "Rodriguez", Pos: model.POS_RB},
+		{YahooID: "100026", FirstName: "Seattle", Pos: model.POS_DEF},
+	}
+
+	expected := []string{"1166", "1339", "1352", "1992", "2216", "2359", "3225", "4080", "4993", "7601", "8154", "10219", "SEA"}
+
+	results, err := testDB.ConvertYahooPlayerIDs(ctx, input)
+	if err != nil {
+		t.Fatalf("error converting yahoo player ids: %v", err)
+	}
+	if !reflect.DeepEqual(expected, results) {
+		t.Errorf("expected: %v, got: %v", expected, results)
+	}
+
+	// Search for a player that won't be found
+	notFound := []model.YahooPlayer{
+		{YahooID: "999999", FirstName: "Captain", LastName: "America", Pos: model.POS_RB},
+	}
+	if _, err := testDB.ConvertYahooPlayerIDs(ctx, notFound); err == nil {
+		t.Errorf("expected an error but there wasn't one when looking up Captain America")
+	}
+
+	multipleFound := []model.YahooPlayer{
+		{YahooID: "40073", FirstName: "Cedric", LastName: "Tillman", Pos: model.POS_WR},
+	}
+	if _, err := testDB.ConvertYahooPlayerIDs(ctx, multipleFound); err == nil {
+		t.Errorf("expected an error but there wasn't one when looking up a duplicated ID")
+	}
+}
+
 func getPlayer() *model.Player {
 	id := atomic.AddInt32(&idCtr, 1)
 

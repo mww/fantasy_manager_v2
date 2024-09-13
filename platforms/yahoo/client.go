@@ -99,6 +99,89 @@ func (c *Client) GetLeagueName(httpClient *http.Client, leagueID string) (string
 	return content.League.Name, nil
 }
 
+func (c *Client) GetScoreboard(httpClient *http.Client, leagueID string, week int) ([]model.Matchup, error) {
+	content, err := c.yahooRequest(httpClient, "/fantasy/v2/league/nfl.l.%s/scoreboard;week=%d", leagueID, week)
+	if err != nil {
+		return nil, err
+	}
+
+	if content == nil ||
+		content.League == nil ||
+		content.League.Scoreboard == nil ||
+		content.League.Scoreboard.Matchups == nil ||
+		content.League.Scoreboard.Matchups.Matchups == nil {
+		return nil, errors.New("league scoreboard not found")
+	}
+
+	results := make([]model.Matchup, 0, 6)
+	for _, m := range content.League.Scoreboard.Matchups.Matchups {
+		if err := validateTeams(m.Teams); err != nil {
+			return nil, err
+		}
+
+		matchup := model.Matchup{
+			Week: week,
+			TeamA: &model.TeamResult{
+				TeamID: m.Teams.Teams[0].Key,
+				Score:  int32(m.Teams.Teams[0].TeamPoints.Total * 1000),
+			},
+			TeamB: &model.TeamResult{
+				TeamID: m.Teams.Teams[1].Key,
+				Score:  int32(m.Teams.Teams[1].TeamPoints.Total * 1000),
+			},
+		}
+
+		results = append(results, matchup)
+	}
+
+	return results, nil
+}
+
+func validateTeams(teams *internal.Teams) error {
+	if teams == nil || len(teams.Teams) != 2 {
+		return errors.New("invalid teams in result")
+	}
+	for _, t := range teams.Teams {
+		if t.Key == "" || t.TeamPoints == nil {
+			return errors.New("invalid team in results")
+		}
+	}
+	return nil
+}
+
+func (c *Client) GetRoster(httpClient *http.Client, teamID string) ([]model.YahooPlayer, error) {
+	content, err := c.yahooRequest(httpClient, "/fantasy/v2/team/%s/roster", teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	if content == nil ||
+		content.Team == nil ||
+		content.Team.Roster == nil ||
+		content.Team.Roster.Players == nil ||
+		content.Team.Roster.Players.Players == nil {
+		return nil, errors.New("team roster not found")
+	}
+
+	results := make([]model.YahooPlayer, 0, 15)
+	for _, p := range content.Team.Roster.Players.Players {
+		y := model.YahooPlayer{
+			YahooID: p.ID,
+			Pos:     model.ParsePosition(p.Position),
+		}
+		if p.Name != nil {
+			y.FirstName = p.Name.First
+			y.LastName = p.Name.Last
+		}
+		if y.Pos == model.POS_DEF {
+			y.FirstName = p.TeamFullName
+		}
+		results = append(results, y)
+	}
+
+	return results, nil
+}
+
 func (c *Client) yahooRequest(httpClient *http.Client, path string, args ...any) (*internal.FantasyContent, error) {
 	p := fmt.Sprintf(path, args...)
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", c.url, p), nil)

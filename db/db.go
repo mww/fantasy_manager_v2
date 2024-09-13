@@ -44,4 +44,6 @@ type DB interface {
 	SavePowerRanking(ctx context.Context, leagueID int32, pr *model.PowerRanking) (int32, error)
 	GetPowerRanking(ctx context.Context, leagueID, powerRankingID int32) (*model.PowerRanking, error)
 	ListPowerRankings(ctx context.Context, leagueID int32) ([]model.PowerRanking, error)
+
+	ConvertYahooPlayerIDs(ctx context.Context, players []model.YahooPlayer) ([]string, error)
 }

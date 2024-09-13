@@ -54,6 +54,13 @@ type Roster struct {
 	PlayerIDs []string
 }
 
+type YahooPlayer struct {
+	YahooID   string
+	FirstName string
+	LastName  string
+	Pos       Position
+}
+
 func GetRosterSpot(pos string) RosterSpot {
 	if strings.ToUpper(pos) == "FLEX" {
 		return RosterSpot{Allowed: []Position{POS_RB, POS_WR, POS_TE}}
