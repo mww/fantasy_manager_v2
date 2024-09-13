@@ -36,7 +36,7 @@ func (a *sleeperAdapter) sortManagers(m []model.LeagueManager) {
 	a.c.sleeper.SortManagers(m)
 }
 
-func (a *sleeperAdapter) getMatchupResults(l *model.League, week int) ([]model.Matchup, []model.PlayerScore, error) {
+func (a *sleeperAdapter) getMatchupResults(ctx context.Context, l *model.League, week int) ([]model.Matchup, []model.PlayerScore, error) {
 	matchups, scores, err := a.c.sleeper.GetMatchupResults(l.ExternalID, week)
 	if err != nil {
 		return nil, nil, err
@@ -56,10 +56,10 @@ func (a *sleeperAdapter) getMatchupResults(l *model.League, week int) ([]model.M
 	return matchups, scores, nil
 }
 
-func (a *sleeperAdapter) getRosters(l *model.League) ([]model.Roster, error) {
+func (a *sleeperAdapter) getRosters(ctx context.Context, l *model.League) ([]model.Roster, error) {
 	return a.c.sleeper.GetRosters(l.ExternalID)
 }
 
-func (a *sleeperAdapter) getStarters(l *model.League) ([]model.RosterSpot, error) {
+func (a *sleeperAdapter) getStarters(ctx context.Context, l *model.League) ([]model.RosterSpot, error) {
 	return a.c.sleeper.GetStarters(l.ExternalID)
 }

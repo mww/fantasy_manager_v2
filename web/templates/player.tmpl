@@ -53,6 +53,9 @@
     {{ else }}
       <div>Status: Inactive</div>
     {{ end }}
+    {{ if .player.YahooID }}
+      <div>YahooID: {{ .player.YahooID }}</div>
+    {{ end }}
 
     {{ if .scores }}
       <h2>Scores</h2>

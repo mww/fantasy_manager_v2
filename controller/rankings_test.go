@@ -149,27 +149,6 @@ func TestRankings(t *testing.T) {
 	}
 }
 
-func TestTrimNameSuffix(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected string
-	}{
-		{input: "Deebo Samuel Sr.", expected: "Deebo Samuel"},
-		{input: "Patrick Mahomes II", expected: "Patrick Mahomes"},
-		{input: "Marvin Harrison Jr.", expected: "Marvin Harrison"},
-		{input: "Russell Wilson", expected: "Russell Wilson"},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.input, func(t *testing.T) {
-			a := trimNameSuffix(tc.input)
-			if a != tc.expected {
-				t.Errorf("expected: '%s', got '%s'", tc.expected, a)
-			}
-		})
-	}
-}
-
 func TestGetPosition(t *testing.T) {
 	tests := []struct {
 		input    string

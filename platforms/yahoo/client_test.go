@@ -103,3 +103,66 @@ func TestGetTeams(t *testing.T) {
 		t.Errorf("expected: %v, but got %v", expected, managers)
 	}
 }
+
+func TestGetScoreboard(t *testing.T) {
+	fakeYahoo := testutils.NewFakeYahooServer()
+	defer fakeYahoo.Close()
+
+	c := NewForTest(fakeYahoo.URL())
+
+	matchups, err := c.GetScoreboard(http.DefaultClient, testutils.YahooLeagueID, 1)
+	if err != nil {
+		t.Fatalf("unexpected error getting yahoo scoreboard: %v", err)
+	}
+
+	expected := []model.Matchup{
+		{
+			Week: 1,
+			TeamA: &model.TeamResult{
+				TeamID: "223.l.431.t.10",
+				Score:  142780,
+			},
+			TeamB: &model.TeamResult{
+				TeamID: "223.l.431.t.5",
+				Score:  88840,
+			},
+		},
+		{
+			Week: 1,
+			TeamA: &model.TeamResult{
+				TeamID: "223.l.431.t.8",
+				Score:  122780,
+			},
+			TeamB: &model.TeamResult{
+				TeamID: "223.l.431.t.12",
+				Score:  87740,
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(expected, matchups) {
+		t.Errorf("expected %v, got %v", expected, matchups)
+	}
+}
+
+func TestGetRoster(t *testing.T) {
+	fakeYahoo := testutils.NewFakeYahooServer()
+	defer fakeYahoo.Close()
+
+	c := NewForTest(fakeYahoo.URL())
+
+	roster, err := c.GetRoster(http.DefaultClient, testutils.YahooTeam10ID)
+	if err != nil {
+		t.Fatalf("unexpected error getting roster: %v", err)
+	}
+
+	expected := []model.YahooPlayer{
+		{YahooID: "29288", FirstName: "Tyler", LastName: "Boyd", Pos: model.POS_WR},
+		{YahooID: "30150", FirstName: "Zay", LastName: "Jones", Pos: model.POS_WR},
+		{YahooID: "31012", FirstName: "Mike", LastName: "Gesicki", Pos: model.POS_TE},
+	}
+
+	if !reflect.DeepEqual(expected, roster) {
+		t.Errorf("expected: %v, got: %v", expected, roster)
+	}
+}

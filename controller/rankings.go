@@ -9,7 +9,6 @@ import (
 	"log"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/mww/fantasy_manager_v2/model"
@@ -169,7 +168,7 @@ func (fp *fantasyprosCSVReader) readLine() (*csvLine, error) {
 	}
 	line.rank = int32(rank)
 
-	line.name = trimNameSuffix(record[fp.nameIdx])
+	line.name = model.TrimNameSuffix(record[fp.nameIdx])
 
 	t := record[fp.teamIdx]
 	line.team = model.ParseTeam(t)
@@ -183,22 +182,6 @@ func (fp *fantasyprosCSVReader) readLine() (*csvLine, error) {
 	}
 
 	return &line, nil
-}
-
-// Take a full name, like "Deebo Samuel Sr."" and return "Deebo Samuel".
-func trimNameSuffix(fullName string) string {
-	suffixList := []string{
-		"Jr.",
-		"Sr.",
-		"II",
-		"IV",
-	}
-
-	for _, s := range suffixList {
-		fullName = strings.TrimSuffix(fullName, s)
-	}
-
-	return strings.TrimSpace(fullName)
 }
 
 var fpPosRegex = regexp.MustCompile(`(?P<pos>[A-Z]+)\d+`)

@@ -874,6 +874,61 @@ func (db *postgresDB) ListPowerRankings(ctx context.Context, leagueID int32) ([]
 	return results, nil
 }
 
+func (db *postgresDB) ConvertYahooPlayerIDs(ctx context.Context, players []model.YahooPlayer) ([]string, error) {
+	results := make([]string, 0, len(players))
+	for _, p := range players {
+		id, err := db.findByYahooID(ctx, p.YahooID)
+		if errors.Is(err, pgx.ErrTooManyRows) {
+			return nil, fmt.Errorf("multiple results found for yahoo_id: %s", p.YahooID)
+		}
+		if errors.Is(err, pgx.ErrNoRows) {
+			id, err = db.findByPlayerName(ctx, &p)
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, id)
+	}
+
+	return results, nil
+}
+
+func (db *postgresDB) findByYahooID(ctx context.Context, yahooID string) (string, error) {
+	const idQuery = `SELECT id FROM players WHERE yahoo_id=@yahooID`
+
+	rows, err := db.pool.Query(ctx, idQuery, pgx.NamedArgs{"yahooID": yahooID})
+	if err != nil {
+		return "", fmt.Errorf("error querying player with yahoo_id=%s: %w", yahooID, err)
+	}
+
+	return pgx.CollectExactlyOneRow(rows, func(row pgx.CollectableRow) (string, error) {
+		var id string
+		err := row.Scan(&id)
+		return id, err
+	})
+}
+
+func (db *postgresDB) findByPlayerName(ctx context.Context, p *model.YahooPlayer) (string, error) {
+	yahooDetails := fmt.Sprintf("%s - %s %s %v", p.YahooID, p.FirstName, p.LastName, p.Pos)
+
+	fullName := model.TrimNameSuffix(fmt.Sprintf("%s %s", p.FirstName, p.LastName))
+	results, err := db.Search(ctx, fullName, p.Pos, nil)
+	if err != nil {
+		return "", fmt.Errorf("error searching for %s: %w", yahooDetails, err)
+	}
+	if len(results) == 0 {
+		return "", fmt.Errorf("no results found for %s", yahooDetails)
+	}
+	if len(results) > 1 {
+		return "", fmt.Errorf("multiple results found for %s", yahooDetails)
+	}
+
+	f := results[0]
+	log.Printf("match found for yahoo id %s, sleeper id %s - %s %s", yahooDetails, f.ID, f.FirstName, f.LastName)
+	return f.ID, nil
+}
+
 func (db *postgresDB) getPowerRankingTeams(ctx context.Context, pr *model.PowerRanking, leagueID int32) error {
 	const teamQuery = `SELECT 
 				t.team, m.team_name, m.manager_name, t.rank, 

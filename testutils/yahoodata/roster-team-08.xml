@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fantasy_content xml:lang="en-US" yahoo:uri="http://fantasysports.yahooapis.com/fantasy/v2/team/449.l.149976.t.10/roster;week=1" time="49.588203430176ms" copyright="Certain Data by Sportradar, Stats Perform and Rotowire" refresh_rate="60" xmlns:yahoo="http://www.yahooapis.com/v1/base.rng" xmlns="http://fantasysports.yahooapis.com/fantasy/v2/base.rng">
+    <team>
+        <team_key>223.l.431.t.8</team_key>
+        <team_id>8</team_id>
+        <name>Y! - Pianowski</name>
+        <is_owned_by_current_login>1</is_owned_by_current_login>
+        <url>https://football.fantasysports.yahoo.com/f1/149976/10</url>
+        <team_logos>
+            <team_logo>
+                <size>large</size>
+                <url>https://s.yimg.com/cv/apiv2/default/nfl/nfl_5.png</url>
+            </team_logo>
+        </team_logos>
+        <waiver_priority>2</waiver_priority>
+        <faab_balance>89</faab_balance>
+        <number_of_moves>3</number_of_moves>
+        <number_of_trades>0</number_of_trades>
+        <roster_adds>
+            <coverage_type>week</coverage_type>
+            <coverage_value>2</coverage_value>
+            <value>2</value>
+        </roster_adds>
+        <league_scoring_type>head</league_scoring_type>
+        <has_draft_grade>1</has_draft_grade>
+        <draft_grade>D-</draft_grade>
+        <draft_recap_url>https://football.fantasysports.yahoo.com/f1/149976/10/draftrecap</draft_recap_url>
+        <managers>
+        </managers>
+        <roster>
+            <coverage_type>week</coverage_type>
+            <week>1</week>
+            <is_prescoring>0</is_prescoring>
+            <is_editable>0</is_editable>
+            <players count="3">
+                <player>
+                    <player_key>449.p.27589</player_key>
+                    <player_id>27589</player_id>
+                    <name>
+                        <full>Allen Robinson</full>
+                        <first>Allen</first>
+                        <last>Robinson</last>
+                        <ascii_first>Allen</ascii_first>
+                        <ascii_last>Robinson</ascii_last>
+                    </name>
+                    <primary_position>WR</primary_position>
+                </player>
+                <player>
+                    <player_key>449.p.27535</player_key>
+                    <player_id>27535</player_id>
+                    <name>
+                        <full>Mike Evans</full>
+                        <first>Mike</first>
+                        <last>Evans</last>
+                        <ascii_first>Mike</ascii_first>
+                        <ascii_last>Evans</ascii_last>
+                    </name>
+                    <primary_position>WR</primary_position>
+                </player>
+                <player>
+                    <player_key>449.p.28442</player_key>
+                    <player_id>28442</player_id>
+                    <name>
+                        <full>Ameer Abdullah</full>
+                        <first>Ameer</first>
+                        <last>Abdullah</last>
+                        <ascii_first>Ameer</ascii_first>
+                        <ascii_last>Abdullah</ascii_last>
+                    </name>
+                    <primary_position>RB</primary_position>
+                </player>
+            </players>
+        </roster>
+    </team>
+</fantasy_content>
+<!-- fantasy-sports-api- -public-production-bf1-68df79b7f-7zwkd Thu Sep 12 20:58:56 UTC 2024 -->
