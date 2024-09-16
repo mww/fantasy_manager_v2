@@ -11,6 +11,8 @@
         <th>Roster</th>
         <th>Points For</th>
         <th>Points Against</th>
+        <th>Record</th>
+        <th>Streak</th>
     </tr>
     {{ range $t := .power.Teams }}
         <tr>
@@ -20,6 +22,8 @@
             <td>{{ $t.RosterScore }}</td>
             <td>{{ $t.PointsForScore }}</td>
             <td>{{ $t.PointsAgainstScore }}</td>
+            <td>{{ $t.RecordScore }}</td>
+            <td>{{ $t.StreakScore }}</td>
         </tr>
     {{ end }}
 </table>

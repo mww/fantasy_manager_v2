@@ -143,49 +143,8 @@ func TestCalculateRosterScores(t *testing.T) {
 }
 
 func TestCalculateFantasyPointsScore(t *testing.T) {
-	pr := &model.PowerRanking{
-		Teams: []model.TeamPowerRanking{
-			{TeamID: "1", TeamName: "AAA"},
-			{TeamID: "2", TeamName: "BBB"},
-			{TeamID: "3", TeamName: "CCC"},
-			{TeamID: "4", TeamName: "DDD"},
-		},
-	}
-
-	weeklyResults := map[int][]model.Matchup{
-		5: {
-			{
-				TeamA: &model.TeamResult{TeamID: "1", Score: 100000},
-				TeamB: &model.TeamResult{TeamID: "2", Score: 105000},
-			},
-			{
-				TeamA: &model.TeamResult{TeamID: "3", Score: 110000},
-				TeamB: &model.TeamResult{TeamID: "4", Score: 90000},
-			},
-		},
-		4: {
-			{
-				TeamA: &model.TeamResult{TeamID: "1", Score: 100000},
-				TeamB: &model.TeamResult{TeamID: "3", Score: 108000},
-			},
-			{
-				TeamA: &model.TeamResult{TeamID: "2", Score: 100000},
-				TeamB: &model.TeamResult{TeamID: "4", Score: 120000},
-			},
-		},
-		3: {
-			{
-				TeamA: &model.TeamResult{TeamID: "1", Score: 100000},
-				TeamB: &model.TeamResult{TeamID: "4", Score: 60000},
-			},
-			{
-				TeamA: &model.TeamResult{TeamID: "2", Score: 110000},
-				TeamB: &model.TeamResult{TeamID: "3", Score: 112000},
-			},
-		},
-	}
-
-	calculateFantasyPointsScore(pr, weeklyResults)
+	pr, weeklyResults := getDataForTest()
+	calculateFantasyPointsScore(pr, weeklyResults, 5)
 
 	if pr.Teams[0].PointsForScore != 100 {
 		t.Errorf("expected team 1 to have points for of 100, got %d", pr.Teams[0].PointsForScore)
@@ -210,6 +169,42 @@ func TestCalculateFantasyPointsScore(t *testing.T) {
 	}
 	if pr.Teams[3].PointsAgainstScore != 31 {
 		t.Errorf("expected team 4 to have points against of 31, got %d", pr.Teams[3].PointsAgainstScore)
+	}
+}
+
+func TestCalculateRecordScore(t *testing.T) {
+	pr, weeklyResults := getDataForTest()
+	calculateRecordScore(pr, weeklyResults, 5)
+
+	if pr.Teams[0].RecordScore != 10 {
+		t.Errorf("expected team 1 to have a record score of 10, got: %d", pr.Teams[0].RecordScore)
+	}
+	if pr.Teams[1].RecordScore != -30 {
+		t.Errorf("expected team 2 to have a record score of -30, got: %d", pr.Teams[1].RecordScore)
+	}
+	if pr.Teams[2].RecordScore != 30 {
+		t.Errorf("expected team 3 to have a record score of 30, got: %d", pr.Teams[2].RecordScore)
+	}
+	if pr.Teams[3].RecordScore != -10 {
+		t.Errorf("expected team 4 to have a record score of -10, got: %d", pr.Teams[3].RecordScore)
+	}
+}
+
+func TestCalculateStreakScore(t *testing.T) {
+	pr, weeklyResults := getDataForTest()
+	calculateStreakScore(pr, weeklyResults, 5)
+
+	if pr.Teams[0].StreakScore != -10 {
+		t.Errorf("expected team 1 to have a streak score of -10, got: %d", pr.Teams[0].StreakScore)
+	}
+	if pr.Teams[1].StreakScore != 5 {
+		t.Errorf("expected team 2 to have a streak score of 5, got: %d", pr.Teams[1].StreakScore)
+	}
+	if pr.Teams[2].StreakScore != 20 {
+		t.Errorf("expected team 3 to have a streak score of 20, got: %d", pr.Teams[2].StreakScore)
+	}
+	if pr.Teams[3].StreakScore != -5 {
+		t.Errorf("expected team 4 to have a streak score of -5, got: %d", pr.Teams[3].StreakScore)
 	}
 }
 
@@ -294,22 +289,9 @@ func TestCalculateAndGetPowerRanking(t *testing.T) {
 				},
 			},
 			{
-				TeamID:   "362744067425296384",
-				TeamName: "No-Bell Prizes",
-				Rank:     3,
-				Roster: []model.PowerRankingPlayer{
-					{FirstName: "Tyler", LastName: "Lockett"},
-					{FirstName: "Russell", LastName: "Wilson"},
-					{FirstName: "Odell", LastName: "Beckham"},
-					{FirstName: "Luke", LastName: "Schoonmaker"},
-					{FirstName: "Logan", LastName: "Thomas"},
-					{FirstName: "Latavius", LastName: "Murray"},
-				},
-			},
-			{
 				TeamID:   "300638784440004608",
 				TeamName: "Puk Nukem",
-				Rank:     4,
+				Rank:     3,
 				Roster: []model.PowerRankingPlayer{
 					{FirstName: "Kirk", LastName: "Cousins"},
 					{FirstName: "Andrei", LastName: "Iosivas"},
@@ -317,6 +299,19 @@ func TestCalculateAndGetPowerRanking(t *testing.T) {
 					{FirstName: "Zay", LastName: "Jones"},
 					{FirstName: "Emanuel", LastName: "Wilson"},
 					{FirstName: "Elijah", LastName: "Higgins"},
+				},
+			},
+			{
+				TeamID:   "362744067425296384",
+				TeamName: "No-Bell Prizes",
+				Rank:     4,
+				Roster: []model.PowerRankingPlayer{
+					{FirstName: "Tyler", LastName: "Lockett"},
+					{FirstName: "Russell", LastName: "Wilson"},
+					{FirstName: "Odell", LastName: "Beckham"},
+					{FirstName: "Luke", LastName: "Schoonmaker"},
+					{FirstName: "Logan", LastName: "Thomas"},
+					{FirstName: "Latavius", LastName: "Murray"},
 				},
 			},
 		},
@@ -340,10 +335,16 @@ func TestCalculateAndGetPowerRanking(t *testing.T) {
 			t.Errorf("expected Rank to be %d, but was %d", e.Rank, a.Rank)
 		}
 		if a.PointsForScore < 90 || a.PointsForScore > 120 {
-			t.Errorf("points for value is outside of expected range for team %d, got: %d", i, a.PointsForScore)
+			t.Errorf("points for value is outside of expected range for team %s, got: %d", a.TeamID, a.PointsForScore)
 		}
 		if a.PointsAgainstScore < 25 || a.PointsAgainstScore > 35 {
-			t.Errorf("points against value is outside of expected range for team %d, got: %d", i, a.PointsAgainstScore)
+			t.Errorf("points against value is outside of expected range for team %s, got: %d", a.TeamID, a.PointsAgainstScore)
+		}
+		if a.RecordScore == 0 {
+			t.Errorf("record score is 0, should have a value for team %s", a.TeamID)
+		}
+		if a.StreakScore == 0 {
+			t.Errorf("streak score is 0, should have a value for team %s", a.TeamID)
 		}
 
 		for j := range e.Roster {
@@ -406,4 +407,80 @@ func getRankingsData() io.Reader {
 "671","Chris Brooks",MIA,"RB172"`
 
 	return strings.NewReader(rankings)
+}
+
+func getDataForTest() (*model.PowerRanking, map[int][]model.Matchup) {
+	pr := &model.PowerRanking{
+		Teams: []model.TeamPowerRanking{
+			{TeamID: "1", TeamName: "AAA"},
+			{TeamID: "2", TeamName: "BBB"},
+			{TeamID: "3", TeamName: "CCC"},
+			{TeamID: "4", TeamName: "DDD"},
+		},
+	}
+
+	weeklyResults := map[int][]model.Matchup{
+		5: {
+			{
+				Week:  5,
+				TeamA: &model.TeamResult{TeamID: "1", Score: 100000},
+				TeamB: &model.TeamResult{TeamID: "2", Score: 105000},
+			},
+			{
+				Week:  5,
+				TeamA: &model.TeamResult{TeamID: "3", Score: 110000},
+				TeamB: &model.TeamResult{TeamID: "4", Score: 90000},
+			},
+		},
+		4: {
+			{
+				Week:  4,
+				TeamA: &model.TeamResult{TeamID: "1", Score: 100000},
+				TeamB: &model.TeamResult{TeamID: "3", Score: 108000},
+			},
+			{
+				Week:  4,
+				TeamA: &model.TeamResult{TeamID: "2", Score: 100000},
+				TeamB: &model.TeamResult{TeamID: "4", Score: 120000},
+			},
+		},
+		3: {
+			{
+				Week:  3,
+				TeamA: &model.TeamResult{TeamID: "1", Score: 100000},
+				TeamB: &model.TeamResult{TeamID: "4", Score: 60000},
+			},
+			{
+				Week:  3,
+				TeamA: &model.TeamResult{TeamID: "2", Score: 110000},
+				TeamB: &model.TeamResult{TeamID: "3", Score: 112000},
+			},
+		},
+		2: {
+			{
+				Week:  2,
+				TeamA: &model.TeamResult{TeamID: "1", Score: 90000},
+				TeamB: &model.TeamResult{TeamID: "2", Score: 89000},
+			},
+			{
+				Week:  2,
+				TeamA: &model.TeamResult{TeamID: "3", Score: 90000},
+				TeamB: &model.TeamResult{TeamID: "4", Score: 89000},
+			},
+		},
+		1: {
+			{
+				Week:  1,
+				TeamA: &model.TeamResult{TeamID: "1", Score: 90000},
+				TeamB: &model.TeamResult{TeamID: "3", Score: 89000},
+			},
+			{
+				Week:  1,
+				TeamA: &model.TeamResult{TeamID: "2", Score: 89000},
+				TeamB: &model.TeamResult{TeamID: "4", Score: 90000},
+			},
+		},
+	}
+
+	return pr, weeklyResults
 }
