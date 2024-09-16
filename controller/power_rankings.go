@@ -23,6 +23,7 @@ func (c *controller) CalculatePowerRanking(ctx context.Context, leagueID, rankin
 	if err != nil {
 		return 0, fmt.Errorf("error getting league with id %d: %w", leagueID, err)
 	}
+	log.Printf("calculating power ranking for league %d (%s)", l.ID, l.Name)
 
 	adaptor := getPlatformAdapter(l.Platform, c)
 
@@ -43,10 +44,6 @@ func (c *controller) CalculatePowerRanking(ctx context.Context, leagueID, rankin
 
 	weeklyResults := make(map[int][]model.Matchup)
 	for w := week; w > 0; w-- {
-		// only use a max of last 3 weeks of data
-		if len(weeklyResults) == 3 {
-			break
-		}
 		results, err := c.GetLeagueResults(ctx, leagueID, w)
 		if err != nil {
 			log.Printf("error getting results for league %d, week %d", leagueID, w)
@@ -57,8 +54,9 @@ func (c *controller) CalculatePowerRanking(ctx context.Context, leagueID, rankin
 
 	powerRanking := initializePowerRankings(rosters, ranking, week)
 	calculateRosterScores(powerRanking, starters)
-	calculateFantasyPointsScore(powerRanking, weeklyResults)
-	// Calculate more parts of the scores
+	calculateFantasyPointsScore(powerRanking, weeklyResults, week)
+	calculateRecordScore(powerRanking, weeklyResults, week)
+	calculateStreakScore(powerRanking, weeklyResults, week)
 	sumFinalScore(powerRanking)
 
 	// Sort by score
@@ -145,7 +143,7 @@ func calculateRosterScores(powerRanking *model.PowerRanking, starters []model.Ro
 }
 
 // Get the score for both points for and points against scored.
-func calculateFantasyPointsScore(pr *model.PowerRanking, weeklyResults map[int][]model.Matchup) {
+func calculateFantasyPointsScore(pr *model.PowerRanking, weeklyResults map[int][]model.Matchup, week int) {
 	type points struct {
 		pointsFor     int32
 		pointsAgainst int32
@@ -153,7 +151,17 @@ func calculateFantasyPointsScore(pr *model.PowerRanking, weeklyResults map[int][
 	}
 	data := make(map[string]*points)
 
-	for _, matchups := range weeklyResults {
+	stop := week - 3
+	if stop < 0 {
+		stop = 0
+	}
+	for i := week; i > stop; i-- {
+		matchups, ok := weeklyResults[i]
+		if !ok {
+			log.Printf("no weekly results for week %d", i)
+			continue
+		}
+
 		for _, m := range matchups {
 			a, found := data[m.TeamA.TeamID]
 			if !found {
@@ -190,9 +198,125 @@ func calculateFantasyPointsScore(pr *model.PowerRanking, weeklyResults map[int][
 	}
 }
 
+func calculateRecordScore(pr *model.PowerRanking, weeklyResults map[int][]model.Matchup, week int) {
+	for i := range pr.Teams {
+		t := pr.Teams[i]
+
+		wins := 0
+		losses := 0
+		draws := 0
+
+		for w := 1; w <= week; w++ {
+			matchups, ok := weeklyResults[w]
+			if !ok {
+				continue
+			}
+			result := getMatchResult(t.TeamID, matchups)
+			switch result {
+			case 1:
+				wins++
+			case -1:
+				losses++
+			case 0:
+				draws++
+			default:
+				log.Printf("unexpected result for team %s in week %d", t.TeamID, w)
+			}
+		}
+
+		log.Printf("team %s (%s) record: (%d-%d-%d)", t.TeamName, t.TeamID, wins, losses, draws)
+		pr.Teams[i].RecordScore = int32((wins - losses) * 10)
+	}
+}
+
+func calculateStreakScore(pr *model.PowerRanking, weeklyResults map[int][]model.Matchup, week int) {
+	currentWeek, ok := weeklyResults[week]
+	if !ok {
+		log.Printf("no results for current week %d, aborting streak calculation", week)
+		return
+	}
+
+	for i := range pr.Teams {
+		t := pr.Teams[i]
+
+		streak := getMatchResult(t.TeamID, currentWeek)
+		if streak == -2 {
+			log.Printf("no streak found for %s starting with week %d", t.TeamID, week)
+			continue
+		}
+
+		for w := week - 1; w > 0; w-- {
+			matchups, ok := weeklyResults[w]
+			if !ok {
+				continue
+			}
+			r := getMatchResult(t.TeamID, matchups)
+			done := false
+			switch r {
+			case 1:
+				if streak > 0 {
+					streak++
+				} else {
+					done = true
+				}
+			case -1:
+				if streak < 1 {
+					streak--
+				} else {
+					done = true
+				}
+			default:
+				done = true
+			}
+
+			if done {
+				break
+			}
+		}
+
+		log.Printf("team %s (%s) streak: %d", t.TeamName, t.TeamID, streak)
+		pr.Teams[i].StreakScore = int32(streak * 5)
+	}
+}
+
+// return 1 for a win, -1 for a loss, 0 for a draw, and -2 if the team
+// wasn't found in the matchups
+func getMatchResult(teamID string, matchups []model.Matchup) int {
+	score := int32(0)
+	opponent := int32(0)
+	matchesFound := 0
+	for _, m := range matchups {
+		if teamID == m.TeamA.TeamID {
+			score = m.TeamA.Score
+			opponent = m.TeamB.Score
+			matchesFound++
+		} else if teamID == m.TeamB.TeamID {
+			score = m.TeamB.Score
+			opponent = m.TeamA.Score
+			matchesFound++
+		}
+	}
+
+	if matchesFound == 0 {
+		return -2
+	}
+	if matchesFound > 1 {
+		log.Printf("more than one match fround in week for team %s", teamID)
+	}
+
+	if score > opponent {
+		return 1
+	} else if opponent > score {
+		return -1
+	} else {
+		return 0
+	}
+}
+
 func sumFinalScore(pr *model.PowerRanking) {
 	for i, t := range pr.Teams {
 		pr.Teams[i].TotalScore = t.RosterScore + t.RecordScore + t.StreakScore + t.PointsForScore + t.PointsAgainstScore
+		log.Printf("team %s (%s) power ranking score: %d", pr.Teams[i].TeamName, pr.Teams[i].TeamID, pr.Teams[i].TotalScore)
 	}
 }
 
