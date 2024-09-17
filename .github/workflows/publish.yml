@@ -19,6 +19,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          check-latest: true
+      
+      - name: Go Test
+        run: go test -count=3 -race -shuffle=on ./...
 
       - name: Log in to the container registry
         uses: docker/login-action@v3

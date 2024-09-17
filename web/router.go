@@ -23,6 +23,7 @@ func getRouter(ctrl controller.C, render *render.Render) *chi.Mux {
 	r.Use(middleware.Timeout(10 * time.Second))
 
 	r.Get("/", rootHandler(ctrl, render))
+	r.Get("/version", versionHandler(ctrl, render))
 
 	r.Route("/players", func(r chi.Router) {
 		// Show either the search page if the q parameter is not present, or perform

@@ -19,7 +19,13 @@ import (
 
 func rootHandler(_ controller.C, render *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		render.Text(w, http.StatusOK, "root page")
+		render.HTML(w, http.StatusOK, "root", nil)
+	}
+}
+
+func versionHandler(_ controller.C, render *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		render.HTML(w, http.StatusOK, "version", nil)
 	}
 }
 

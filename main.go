@@ -20,6 +20,12 @@ import (
 	"golang.org/x/oauth2"
 )
 
+var (
+	Version   string
+	GitHash   string
+	BuildDate string
+)
+
 func main() {
 	err := godotenv.Load()
 	if err != nil && !os.IsNotExist(err) {
@@ -75,7 +81,7 @@ func main() {
 		log.Fatalf("error creating a new controller: %v", err)
 	}
 
-	server, err := web.NewServer(portNum, ctrl)
+	server, err := web.NewServer(portNum, ctrl, Version, GitHash, BuildDate)
 	if err != nil {
 		log.Fatalf("error creating new web server: %v", err)
 	}

@@ -18,11 +18,12 @@ import (
 var templates embed.FS
 
 type Server struct {
-	server *http.Server
+	server  *http.Server
+	version string
 }
 
-func NewServer(port int, ctrl controller.C) (*Server, error) {
-	render := newRender()
+func NewServer(port int, ctrl controller.C, version, githash, buildDate string) (*Server, error) {
+	render := newRender(version, githash, buildDate)
 	router := getRouter(ctrl, render)
 
 	s := &Server{
@@ -56,7 +57,7 @@ func (s *Server) ListenAndServe(shutdown chan bool, wg *sync.WaitGroup) {
 	}
 }
 
-func newRender() *render.Render {
+func newRender(version, githash, buildDate string) *render.Render {
 	return render.New(render.Options{
 		Directory: "templates",
 		Layout:    "layout",
@@ -65,12 +66,15 @@ func newRender() *render.Render {
 		},
 		Funcs: []template.FuncMap{
 			{
-				"age":      ageFormatter,
-				"date":     dateFormatter,
-				"height":   heightFormatter,
-				"year":     yearFormatter,
-				"score":    scoreFormatter,
-				"dateTime": dateTimeFormatter,
+				"age":       ageFormatter,
+				"date":      dateFormatter,
+				"height":    heightFormatter,
+				"year":      yearFormatter,
+				"score":     scoreFormatter,
+				"dateTime":  dateTimeFormatter,
+				"version":   stringOrUnset(version),
+				"gitHash":   stringOrUnset(githash),
+				"buildDate": stringOrUnset(buildDate),
 			},
 		},
 	})
@@ -124,4 +128,15 @@ func dateTimeFormatter(t time.Time) string {
 func scoreFormatter(s int32) string {
 	d := float64(s) / 1000
 	return fmt.Sprintf("%0.2f", d)
+}
+
+// Returns a function the either returns the value s or "unset"
+func stringOrUnset(s string) func() string {
+	if s == "" {
+		s = "unset"
+	}
+
+	return func() string {
+		return s
+	}
 }
