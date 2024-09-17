@@ -158,7 +158,7 @@ func runRankingsUploadHandlerTest(t *testing.T, ctrl controller.C, contentType, 
 
 	rr := httptest.NewRecorder()
 
-	handler := http.HandlerFunc(rankingsUploadHandler(ctrl, newRender()))
+	handler := http.HandlerFunc(rankingsUploadHandler(ctrl, newRender("version", "githash", "build-date")))
 	handler.ServeHTTP(rr, req)
 	return rr.Result()
 }
