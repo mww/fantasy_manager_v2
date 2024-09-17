@@ -18,8 +18,7 @@ import (
 var templates embed.FS
 
 type Server struct {
-	server  *http.Server
-	version string
+	server *http.Server
 }
 
 func NewServer(port int, ctrl controller.C, version, githash, buildDate string) (*Server, error) {
@@ -130,7 +129,7 @@ func scoreFormatter(s int32) string {
 	return fmt.Sprintf("%0.2f", d)
 }
 
-// Returns a function the either returns the value s or "unset"
+// Returns a function that either returns the value s or "unset"
 func stringOrUnset(s string) func() string {
 	if s == "" {
 		s = "unset"
