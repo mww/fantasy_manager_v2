@@ -39,7 +39,7 @@ func (c *controller) UpdatePlayerNickname(ctx context.Context, id, nickname stri
 
 	// Delete the nickname
 	if nickname == "" {
-		return c.db.DeleteNickname(ctx, id, p.Nickname1)
+		return c.db.DeletePlayerNickname(ctx, id, p.Nickname1)
 	}
 
 	p.Nickname1 = nickname
