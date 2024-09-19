@@ -11,7 +11,7 @@ import (
 type DB interface {
 	GetPlayer(ctx context.Context, id string) (*model.Player, error)
 	SavePlayer(ctx context.Context, p *model.Player) error
-	DeleteNickname(ctx context.Context, id string, oldNickname string) error
+	DeletePlayerNickname(ctx context.Context, playerID string, oldNickname string) error
 	Search(ctx context.Context, query string, pos model.Position, team *model.NFLTeam) ([]model.Player, error)
 
 	SavePlayerScores(ctx context.Context, leagueID int32, week int, scores []model.PlayerScore) error
