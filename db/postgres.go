@@ -646,7 +646,7 @@ func (db *postgresDB) GetPowerRanking(ctx context.Context, leagueID, powerRankin
 }
 
 func (db *postgresDB) ListPowerRankings(ctx context.Context, leagueID int32) ([]model.PowerRanking, error) {
-	const query = `SELECT id, week, created FROM power_Rankings WHERE league_id=@leagueID ORDER BY week DESC, created DESC`
+	const query = `SELECT id, week, created FROM power_rankings WHERE league_id=@leagueID ORDER BY week DESC, created DESC`
 
 	results := make([]model.PowerRanking, 0)
 
