@@ -42,6 +42,16 @@ func (c *controller) CalculatePowerRanking(ctx context.Context, leagueID, rankin
 		return 0, fmt.Errorf("error getting starters list for league %d: %w", l.ID, err)
 	}
 
+	// Ignore any errors from listing power rankings since it isn't required
+	var prev *model.PowerRanking
+	list, _ := c.ListPowerRankings(ctx, leagueID)
+	if len(list) > 0 {
+		prev, err = c.GetPowerRanking(ctx, leagueID, list[0].ID)
+		if err != nil {
+			log.Printf("error getting previous power ranking %d for league %d: %v", list[0].ID, leagueID, err)
+		}
+	}
+
 	weeklyResults := make(map[int][]model.Matchup)
 	for w := week; w > 0; w-- {
 		results, err := c.GetLeagueResults(ctx, leagueID, w)
@@ -67,6 +77,7 @@ func (c *controller) CalculatePowerRanking(ctx context.Context, leagueID, rankin
 	for i := range powerRanking.Teams {
 		powerRanking.Teams[i].Rank = i + 1
 	}
+	calculateRankChange(powerRanking, prev)
 
 	id, err := c.db.SavePowerRanking(ctx, leagueID, powerRanking)
 	if err != nil {
@@ -276,6 +287,23 @@ func calculateStreakScore(pr *model.PowerRanking, weeklyResults map[int][]model.
 
 		log.Printf("team %s (%s) streak: %d", t.TeamName, t.TeamID, streak)
 		pr.Teams[i].StreakScore = int32(streak * 5)
+	}
+}
+
+func calculateRankChange(pr, prev *model.PowerRanking) {
+	if prev == nil {
+		return
+	}
+
+	prevRanks := make(map[string]int)
+	for _, t := range prev.Teams {
+		prevRanks[t.TeamID] = t.Rank
+	}
+
+	for i := range pr.Teams {
+		if oldRank, ok := prevRanks[pr.Teams[i].TeamID]; ok {
+			pr.Teams[i].RankChange = oldRank - pr.Teams[i].Rank
+		}
 	}
 }
 

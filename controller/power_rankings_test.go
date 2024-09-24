@@ -208,6 +208,40 @@ func TestCalculateStreakScore(t *testing.T) {
 	}
 }
 
+func TestCalculateRankChange(t *testing.T) {
+	pr := &model.PowerRanking{
+		Teams: []model.TeamPowerRanking{
+			{TeamID: "1", TeamName: "AAA", Rank: 1},
+			{TeamID: "2", TeamName: "BBB", Rank: 2},
+			{TeamID: "3", TeamName: "CCC", Rank: 3},
+			{TeamID: "4", TeamName: "DDD", Rank: 4},
+		},
+	}
+
+	prev := &model.PowerRanking{
+		Teams: []model.TeamPowerRanking{
+			{TeamID: "2", TeamName: "BBB", Rank: 1},
+			{TeamID: "4", TeamName: "DDD", Rank: 2},
+			{TeamID: "3", TeamName: "CCC", Rank: 3},
+			{TeamID: "1", TeamName: "AAA", Rank: 4},
+		},
+	}
+
+	calculateRankChange(pr, prev)
+	if pr.Teams[0].RankChange != 3 {
+		t.Errorf("expected team 1 to have rank change of 3, got: %d", pr.Teams[0].RankChange)
+	}
+	if pr.Teams[1].RankChange != -1 {
+		t.Errorf("expected team 2 to have rank change of -1, got: %d", pr.Teams[1].RankChange)
+	}
+	if pr.Teams[2].RankChange != 0 {
+		t.Errorf("expected team 3 to have rank change of 0, got: %d", pr.Teams[2].RankChange)
+	}
+	if pr.Teams[3].RankChange != -2 {
+		t.Errorf("expected team 3 to have rank change of -2, got: %d", pr.Teams[3].RankChange)
+	}
+}
+
 func TestCalculateAndGetPowerRanking(t *testing.T) {
 	ctrl, testCtrl := controllerForTest()
 	defer testCtrl.Close()

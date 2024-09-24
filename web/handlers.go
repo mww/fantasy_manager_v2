@@ -440,7 +440,15 @@ func showPowerRankingsTextHandler(ctrl controller.C, render *render.Render) http
 
 		var builder strings.Builder
 		for i := range pr.Teams {
-			builder.WriteString(fmt.Sprintf("%d. %s\n", pr.Teams[i].Rank, pr.Teams[i].TeamName))
+			var s string
+			if pr.Teams[i].RankChange > 0 {
+				s = fmt.Sprintf("%d. %s (+%d)\n", pr.Teams[i].Rank, pr.Teams[i].TeamName, pr.Teams[i].RankChange)
+			} else if pr.Teams[i].RankChange < 0 {
+				s = fmt.Sprintf("%d. %s (%d)\n", pr.Teams[i].Rank, pr.Teams[i].TeamName, pr.Teams[i].RankChange)
+			} else {
+				s = fmt.Sprintf("%d. %s\n", pr.Teams[i].Rank, pr.Teams[i].TeamName)
+			}
+			builder.WriteString(s)
 		}
 		render.Text(w, http.StatusOK, builder.String())
 	}
