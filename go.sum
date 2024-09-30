@@ -122,8 +122,8 @@ github.com/tklauser/go-sysconf v0.3.12 h1:0QaGUFOdQaIVdPgfITYzaTegZvdCjmYO52cSFA
 github.com/tklauser/go-sysconf v0.3.12/go.mod h1:Ho14jnntGE1fpdOqQEEaiKRpvIavV0hSfmBq8nJbHYI=
 github.com/tklauser/numcpus v0.6.1 h1:ng9scYS7az0Bk4OZLvrNXNSAO2Pxr1XXRAPyjhIx+Fk=
 github.com/tklauser/numcpus v0.6.1/go.mod h1:1XfjsgE2zo8GVw7POkMbHENHzVg3GzmoZ9fESEdAacY=
-github.com/unrolled/render v1.6.1 h1:Qa7dLBJ1/DLogeAEINpMnMuUqpFTEzBPZXDrXvyiVNc=
-github.com/unrolled/render v1.6.1/go.mod h1:LwQSeDhjml8NLjIO9GJO1/1qpFJxtfVIpzxXKjfVkoI=
+github.com/unrolled/render v1.7.0 h1:1yke01/tZiZpiXfUG+zqB+6fq3G4I+KDmnh0EhPq7So=
+github.com/unrolled/render v1.7.0/go.mod h1:LwQSeDhjml8NLjIO9GJO1/1qpFJxtfVIpzxXKjfVkoI=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yusufpapurcu/wmi v1.2.3 h1:E1ctvB7uKFMOJw3fdOW32DwGE9I7t++CRUEMKvFoFiw=
