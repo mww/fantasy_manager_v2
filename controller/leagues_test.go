@@ -226,3 +226,43 @@ func TestSyncResultsFromPlatform(t *testing.T) {
 		}
 	}
 }
+
+func TestGetLeagueStandings(t *testing.T) {
+	ctx := context.Background()
+
+	ctrl, testCtrl := controllerForTest()
+	defer testCtrl.Close()
+
+	if err := ctrl.UpdatePlayers(ctx); err != nil {
+		t.Fatalf("error adding players: %v", err)
+	}
+
+	l, err := ctrl.AddLeague(ctx, model.PlatformSleeper, testutils.SleeperLeagueID, "2024", "" /* state */)
+	if err != nil {
+		t.Fatalf("error adding league: %v", err)
+	}
+	defer func() {
+		ctrl.ArchiveLeague(ctx, l.ID)
+	}()
+
+	l, err = ctrl.AddLeagueManagers(ctx, l.ID)
+	if err != nil {
+		t.Fatalf("error adding league managers: %v", err)
+	}
+
+	standings, err := ctrl.GetLeagueStandings(ctx, l.ID)
+	if err != nil {
+		t.Fatalf("unexpected error getting league standings: %v", err)
+	}
+
+	expected := []model.LeagueStanding{
+		{TeamID: "325106323354046464", TeamName: "Jolly Roger", Rank: 1, Wins: 24, Losses: 4, Draws: 0, Scored: "1825.98"},
+		{TeamID: "300368913101774848", TeamName: "gee17", Rank: 2, Wins: 20, Losses: 8, Draws: 0, Scored: "1554.16"},
+		{TeamID: "300638784440004608", TeamName: "Puk Nukem", Rank: 3, Wins: 19, Losses: 9, Draws: 0, Scored: "1516.56"},
+		{TeamID: "362744067425296384", TeamName: "No-Bell Prizes", Rank: 4, Wins: 18, Losses: 10, Draws: 0, Scored: "1525.08"},
+	}
+
+	if !reflect.DeepEqual(expected, standings) {
+		t.Errorf("expected: %v, got: %v", expected, standings)
+	}
+}
