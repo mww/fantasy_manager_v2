@@ -25,6 +25,7 @@ type C interface {
 	UpdatePlayers(ctx context.Context) error
 	// Look up the scores for a specific player for all leagues and weeks.
 	GetPlayerScores(ctx context.Context, playerID string) ([]model.SeasonScores, error)
+	GetTopScores(ctx context.Context, leagueID int32, week int) ([]model.PlayerScore, error)
 	RunPeriodicPlayerUpdates(frequency time.Duration, shutdown chan bool, wg *sync.WaitGroup)
 
 	// Add a new rankings for players. This will parse the data from the reader (in CSV format) and
@@ -45,6 +46,7 @@ type C interface {
 	// Return a slice of weeks for which there are results for the league
 	ListLeagueResultWeeks(ctx context.Context, leagueID int32) ([]int, error)
 	GetLeagueResults(ctx context.Context, leagueID int32, week int) ([]model.Matchup, error)
+	GetLeagueStandings(ctx context.Context, leagueID int32) ([]model.LeagueStanding, error)
 
 	ListPowerRankings(ctx context.Context, leagueID int32) ([]model.PowerRanking, error)
 	GetPowerRanking(ctx context.Context, leagueID, powerRankingID int32) (*model.PowerRanking, error)
@@ -108,6 +110,7 @@ type platformAdpater interface {
 	getRosters(ctx context.Context, l *model.League) ([]model.Roster, error)
 	// Get all the starting roster spots. This is used in the power rankings calculations.
 	getStarters(ctx context.Context, l *model.League) ([]model.RosterSpot, error)
+	getLeagueStandings(ctx context.Context, leagueID string) ([]model.LeagueStanding, error)
 }
 
 func getPlatformAdapter(platform string, c *controller) platformAdpater {
@@ -151,5 +154,9 @@ func (a *nilPlatformAdapter) getRosters(ctx context.Context, l *model.League) ([
 }
 
 func (a *nilPlatformAdapter) getStarters(ctx context.Context, l *model.League) ([]model.RosterSpot, error) {
+	return nil, a.err
+}
+
+func (a *nilPlatformAdapter) getLeagueStandings(ctx context.Context, leagueID string) ([]model.LeagueStanding, error) {
 	return nil, a.err
 }

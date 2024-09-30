@@ -376,3 +376,53 @@ func TestGetStarters(t *testing.T) {
 		t.Errorf("starters do not match expected, got: %v", starters)
 	}
 }
+
+func TestGetLeagueStandings(t *testing.T) {
+	fakeSleeper := testutils.NewFakeSleeperServer()
+	defer fakeSleeper.Close()
+	c := NewForTest(fakeSleeper.URL())
+
+	standings, err := c.GetLeagueStandings(testutils.SleeperLeagueID)
+	if err != nil {
+		t.Fatalf("error getting league standings: %v", err)
+	}
+
+	expected := []model.LeagueStanding{
+		{
+			TeamID: "325106323354046464",
+			Rank:   1,
+			Wins:   24,
+			Losses: 4,
+			Draws:  0,
+			Scored: "1825.98",
+		},
+		{
+			TeamID: "300368913101774848",
+			Rank:   2,
+			Wins:   20,
+			Losses: 8,
+			Draws:  0,
+			Scored: "1554.16",
+		},
+		{
+			TeamID: "300638784440004608",
+			Rank:   3,
+			Wins:   19,
+			Losses: 9,
+			Draws:  0,
+			Scored: "1516.56",
+		},
+		{
+			TeamID: "362744067425296384",
+			Rank:   4,
+			Wins:   18,
+			Losses: 10,
+			Draws:  0,
+			Scored: "1525.08",
+		},
+	}
+
+	if !reflect.DeepEqual(expected, standings) {
+		t.Errorf("standings are not expected values, got: %v", standings)
+	}
+}

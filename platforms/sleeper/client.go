@@ -42,6 +42,8 @@ type Client interface {
 	// Get a list of all the positions a user needs to start in the league.
 	// This is used to select a starting lineup in the power rankings.
 	GetStarters(leagueID string) ([]model.RosterSpot, error)
+
+	GetLeagueStandings(leagueID string) ([]model.LeagueStanding, error)
 }
 
 type client struct {
@@ -296,6 +298,64 @@ func (c *client) GetStarters(leagueID string) ([]model.RosterSpot, error) {
 		response = append(response, model.GetRosterSpot(p))
 	}
 	return response, nil
+}
+
+func (c *client) GetLeagueStandings(leagueID string) ([]model.LeagueStanding, error) {
+	type settings struct {
+		FPts        int `json:"fpts"`
+		FPtsDecimal int `json:"fpts_decimal"`
+		Wins        int `json:"wins"`
+		Losses      int `json:"losses"`
+		Ties        int `json:"ties"`
+	}
+	var data []struct {
+		OwnerID  string   `json:"owner_id"`
+		Settings settings `json:"settings"`
+	}
+	if err := c.sleeperRequest(&data, "/v1/league/%s/rosters", leagueID); err != nil {
+		return nil, err
+	}
+
+	results := make([]model.LeagueStanding, 0, len(data))
+	for _, t := range data {
+		s := model.LeagueStanding{
+			TeamID: t.OwnerID,
+			Wins:   t.Settings.Wins,
+			Losses: t.Settings.Losses,
+			Draws:  t.Settings.Ties,
+			Scored: fmt.Sprintf("%d.%02d", t.Settings.FPts, t.Settings.FPtsDecimal),
+		}
+		results = append(results, s)
+	}
+
+	// Sort in order:
+	// - Highest number of wins
+	// - Smaller number of losses
+	// - Fantasy points scored
+	slices.SortFunc(results, func(a, b model.LeagueStanding) int {
+		if a.Wins == b.Wins {
+			if a.Losses == b.Losses {
+				fa, e1 := strconv.ParseFloat(a.Scored, 64)
+				fb, e2 := strconv.ParseFloat(b.Scored, 64)
+				if err := errors.Join(e1, e2); err != nil {
+					log.Printf("error parsing points scored: %v", err)
+					return 0
+				}
+				if fa > fb {
+					return -1
+				} else if fb > fa {
+					return 1
+				}
+				return 0
+			}
+			return a.Losses - b.Losses
+		}
+		return b.Wins - a.Wins
+	})
+	for i := range results {
+		results[i].Rank = i + 1
+	}
+	return results, nil
 }
 
 // Sends the request to sleeper and uses a JSON parser to read the result into res.

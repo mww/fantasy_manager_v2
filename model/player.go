@@ -72,9 +72,12 @@ func (c *Change) String() string {
 }
 
 // PlayerScore represents how many fantasy points a specific player scored in a single week in a single league.
+// FirstName and LastName are typically empty, but used when getting the top scores for a given week.
 type PlayerScore struct {
-	PlayerID string
-	Score    int32
+	PlayerID  string
+	FirstName string
+	LastName  string
+	Score     int32
 }
 
 // SeasonScores aggregates all the weekly scores for a player in a league. It

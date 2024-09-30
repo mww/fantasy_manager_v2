@@ -139,3 +139,35 @@ func (c *controller) ListLeagueResultWeeks(ctx context.Context, leagueID int32) 
 func (c *controller) GetLeagueResults(ctx context.Context, leagueID int32, week int) ([]model.Matchup, error) {
 	return c.db.GetResults(ctx, leagueID, week)
 }
+
+func (c *controller) GetLeagueStandings(ctx context.Context, leagueID int32) ([]model.LeagueStanding, error) {
+	l, err := c.db.GetLeague(ctx, leagueID)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up league: %w", err)
+	}
+	l.Managers, err = c.db.GetLeagueManagers(ctx, leagueID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting league managers: %w", err)
+	}
+
+	// Map team id to name
+	nameMap := make(map[string]string)
+	for _, t := range l.Managers {
+		name := t.TeamName
+		if name == "" {
+			name = t.ManagerName
+		}
+		nameMap[t.ExternalID] = name
+	}
+
+	standings, err := getPlatformAdapter(l.Platform, c).getLeagueStandings(ctx, l.ExternalID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting league standings: %w", err)
+	}
+	// Fill in the team name
+	for i := range standings {
+		standings[i].TeamName = nameMap[standings[i].TeamID]
+	}
+
+	return standings, nil
+}

@@ -63,3 +63,7 @@ func (a *sleeperAdapter) getRosters(ctx context.Context, l *model.League) ([]mod
 func (a *sleeperAdapter) getStarters(ctx context.Context, l *model.League) ([]model.RosterSpot, error) {
 	return a.c.sleeper.GetStarters(l.ExternalID)
 }
+
+func (a *sleeperAdapter) getLeagueStandings(ctx context.Context, leagueID string) ([]model.LeagueStanding, error) {
+	return a.c.sleeper.GetLeagueStandings(leagueID)
+}

@@ -345,6 +345,156 @@ func getLeagueResultsHandler(ctrl controller.C, render *render.Render) http.Hand
 	}
 }
 
+func getLeagueResultsTemplateHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		leagueID, err := getID(r, "leagueID")
+		if err != nil {
+			render.HTML(w, http.StatusBadRequest, "400", err)
+			return
+		}
+
+		week, err := strconv.Atoi(chi.URLParam(r, "week"))
+		if err != nil {
+			msg := fmt.Sprintf("error reading week value: %v", err)
+			render.HTML(w, http.StatusBadRequest, "400", msg)
+			return
+		}
+
+		league, err := ctrl.GetLeague(r.Context(), leagueID)
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err)
+			return
+		}
+
+		matchups, err := ctrl.GetLeagueResults(r.Context(), leagueID, week)
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err)
+			return
+		}
+
+		topScores, err := ctrl.GetTopScores(r.Context(), leagueID, week)
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", err)
+			return
+		}
+
+		prList, err := ctrl.ListPowerRankings(r.Context(), leagueID)
+		if err != nil {
+			render.HTML(w, http.StatusInternalServerError, "500", fmt.Errorf("error listing power rankings: %v", err))
+			return
+		}
+		var powerRanking *model.PowerRanking
+		if int(prList[0].Week) == week {
+			powerRanking, err = ctrl.GetPowerRanking(r.Context(), leagueID, prList[0].ID)
+			if err != nil {
+				render.HTML(w, http.StatusInternalServerError, "500", fmt.Errorf("error fetching power ranking: %v", err))
+				return
+			}
+		}
+
+		var standings []model.LeagueStanding
+		standings, err = ctrl.GetLeagueStandings(r.Context(), leagueID)
+		if err != nil {
+			log.Printf("error getting league standings, non-fatal: %v", err)
+		}
+
+		var res strings.Builder
+		res.WriteString("---\n")
+		res.WriteString(fmt.Sprintf("title: \"%s\"\n", league.Name))
+		res.WriteString(fmt.Sprintf("date: %s\n", time.Now().Format(time.DateOnly)))
+		res.WriteString("image: cover.jpeg\n")
+		res.WriteString(fmt.Sprintf("description: \"Week %d, %s\"\n", week, time.Now().Format("2006")))
+		res.WriteString("layout: \"season\"\n")
+		res.WriteString(fmt.Sprintf("url: \"/ff/seasons/%s/week-%02d\"\n", time.Now().Format("2006"), week))
+		res.WriteString("---\n\n")
+
+		res.WriteString("TODO - short statement about the week\n\n")
+
+		res.WriteString("# Results\n\n")
+		res.WriteString("League Median: TODO\n")
+
+		res.WriteString("{{< table-with-class \"results-table\" >}}\n")
+		res.WriteString("| Team | Score |\n")
+		res.WriteString("| ---- | ----- |\n")
+		for _, m := range matchups {
+			var w, l *model.TeamResult
+			if m.TeamA.Score > m.TeamB.Score {
+				w = m.TeamA
+				l = m.TeamB
+			} else {
+				w = m.TeamB
+				l = m.TeamA
+			}
+			res.WriteString(fmt.Sprintf("| **%s** | **%s** |\n", w.TeamName, formatScore(w.Score)))
+			res.WriteString(fmt.Sprintf("| %s | %s |\n", l.TeamName, formatScore(l.Score)))
+			res.WriteString("| | |\n")
+		}
+		res.WriteString("{{< /table-with-class >}}\n\n")
+
+		res.WriteString("# Fantasy Heros\n")
+		res.WriteString("TODO - short commentary\n\n")
+		res.WriteString("| Name | Team | Score |\n")
+		res.WriteString("| ---- | ---- | ----- |\n")
+		for _, t := range topScores {
+			res.WriteString(fmt.Sprintf("| %s %s | TODO | %s |\n", t.FirstName, t.LastName, formatScore(t.Score)))
+		}
+
+		res.WriteString("\n")
+		res.WriteString("# Blunder of the Week\n")
+		res.WriteString("TODO - Choose a major blunder\n")
+
+		res.WriteString("\n")
+		res.WriteString("# Transaction action\n")
+		res.WriteString("TODO - write about and trades or waiver wire moves\n")
+
+		if powerRanking != nil {
+			res.WriteString("\n")
+			res.WriteString("# Power Rankings\n")
+			res.WriteString("TODO - Short blurb\n\n")
+			res.WriteString("| Team | Change |\n")
+			res.WriteString("| ---- | ------ |\n")
+			for _, t := range powerRanking.Teams {
+				change := "-"
+				if t.RankChange > 0 {
+					change = fmt.Sprintf("{{< triangle-up %d >}}", t.RankChange)
+				} else if t.RankChange < 0 {
+					change = fmt.Sprintf("{{< triangle-down %d >}}", t.RankChange)
+				}
+
+				res.WriteString(fmt.Sprintf("| %s | %s |\n", t.TeamName, change))
+			}
+		}
+
+		if standings != nil {
+			res.WriteString("\n")
+			res.WriteString("# Standings\n")
+			res.WriteString("| Team | Record | Scored |\n")
+			res.WriteString("| ---- | ------ | ------ |\n")
+			for _, s := range standings {
+				record := fmt.Sprintf("%d-%d", s.Wins, s.Losses)
+				if s.Draws > 0 {
+					record = fmt.Sprintf("%d-%d-%d", s.Wins, s.Losses, s.Draws)
+				}
+				res.WriteString(fmt.Sprintf("| %s | %s | %s |\n", s.TeamName, record, s.Scored))
+			}
+		}
+
+		res.WriteString("\n")
+		res.WriteString("# Weekly high scores\n")
+		res.WriteString("1. TODO\n")
+
+		res.WriteString("\n")
+		res.WriteString("Cover Photo: [name/Icon Sportswire](link-to-image)\n")
+
+		render.Text(w, http.StatusOK, res.String())
+	}
+}
+
+func formatScore(score int32) string {
+	s := float64(score) / 1000.00
+	return fmt.Sprintf("%.02f", s)
+}
+
 func createPowerRankingsHandler(ctrl controller.C, render *render.Render) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		leagueID, err := getID(r, "leagueID")
