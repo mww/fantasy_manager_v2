@@ -196,6 +196,35 @@ func (db *postgresDB) GetPlayerScores(ctx context.Context, playerID string) ([]m
 	return results, nil
 }
 
+func (db *postgresDB) GetTopScores(ctx context.Context, leagueID int32, week int) ([]model.PlayerScore, error) {
+	const query = `SELECT p.id, p.name_first, p.name_last, s.score FROM player_scores AS s 
+			INNER JOIN players as p 
+			ON (s.player_id=p.id) 
+			WHERE s.league_id=@leagueID and s.week=@week ORDER BY s.score DESC LIMIT 5`
+
+	args := pgx.NamedArgs{
+		"leagueID": leagueID,
+		"week":     week,
+	}
+	rows, err := db.pool.Query(ctx, query, args)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]model.PlayerScore, 0, 5)
+	for rows.Next() {
+		var p model.PlayerScore
+		if err := rows.Scan(&p.PlayerID, &p.FirstName, &p.LastName, &p.Score); err != nil {
+			return nil, err
+		}
+		res = append(res, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 func (db *postgresDB) ConvertYahooPlayerIDs(ctx context.Context, players []model.YahooPlayer) ([]string, error) {
 	results := make([]string, 0, len(players))
 	for _, p := range players {

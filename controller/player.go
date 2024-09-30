@@ -70,6 +70,10 @@ func (c *controller) GetPlayerScores(ctx context.Context, playerID string) ([]mo
 	return c.db.GetPlayerScores(ctx, playerID)
 }
 
+func (c *controller) GetTopScores(ctx context.Context, leagueID int32, week int) ([]model.PlayerScore, error) {
+	return c.db.GetTopScores(ctx, leagueID, week)
+}
+
 func (c *controller) RunPeriodicPlayerUpdates(frequency time.Duration, shutdown chan bool, wg *sync.WaitGroup) {
 	ticker := time.NewTicker(frequency)
 	defer wg.Done()

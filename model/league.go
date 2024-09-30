@@ -13,6 +13,16 @@ type League struct {
 	Managers   []LeagueManager
 }
 
+type LeagueStanding struct {
+	TeamID   string
+	TeamName string
+	Rank     int
+	Wins     int
+	Losses   int
+	Draws    int
+	Scored   string
+}
+
 type LeagueManager struct {
 	ExternalID  string
 	TeamName    string

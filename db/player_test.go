@@ -218,6 +218,146 @@ func TestPlayer_nicknames(t *testing.T) {
 	}
 }
 
+func TestSaveAndGetPlayerScores(t *testing.T) {
+	ctx := context.Background()
+
+	l1 := getLeague()
+	l2 := getLeague()
+	l2.Year = "2023"
+	for _, l := range []*model.League{l1, l2} {
+		if err := testDB.AddLeague(ctx, l); err != nil {
+			t.Fatalf("error adding league: %v", err)
+		}
+	}
+	// Cleanup after the test
+	defer func() {
+		testDB.ArchiveLeague(ctx, l1.ID)
+		testDB.ArchiveLeague(ctx, l2.ID)
+	}()
+
+	p1 := getPlayer()
+	p2 := getPlayer()
+	for _, p := range []*model.Player{p1, p2} {
+		if err := testDB.SavePlayer(ctx, p); err != nil {
+			t.Fatalf("error adding player: %v", err)
+		}
+	}
+
+	// League 1
+	l1w1 := []model.PlayerScore{
+		{PlayerID: p1.ID, Score: 20220},
+		{PlayerID: p2.ID, Score: 5100},
+	}
+	if err := testDB.SavePlayerScores(ctx, l1.ID, 1, l1w1); err != nil {
+		t.Fatalf("error saving l1 w1 scores: %v", err)
+	}
+
+	l2w1 := []model.PlayerScore{
+		{PlayerID: p1.ID, Score: 14700},
+		{PlayerID: p2.ID, Score: 20500},
+	}
+	if err := testDB.SavePlayerScores(ctx, l2.ID, 1, l2w1); err != nil {
+		t.Fatalf("error saving l2 w1 scores: %v", err)
+	}
+
+	l1w2 := []model.PlayerScore{
+		{PlayerID: p1.ID, Score: 24720},
+		{PlayerID: p2.ID, Score: 20900},
+	}
+	if err := testDB.SavePlayerScores(ctx, l1.ID, 2, l1w2); err != nil {
+		t.Fatalf("error saving l1 w2 scores: %v", err)
+	}
+
+	l2w2 := []model.PlayerScore{
+		{PlayerID: p1.ID, Score: 3900},
+		{PlayerID: p2.ID, Score: 16400},
+	}
+	if err := testDB.SavePlayerScores(ctx, l2.ID, 2, l2w2); err != nil {
+		t.Fatalf("error saving l2 w2 scores: %v", err)
+	}
+
+	scores, err := testDB.GetPlayerScores(ctx, p2.ID)
+	if err != nil {
+		t.Fatalf("error fetching scores for p2: %v", err)
+	}
+
+	expected := []model.SeasonScores{
+		{
+			LeagueID:   l2.ID,
+			LeagueName: l2.Name,
+			LeagueYear: l2.Year,
+			PlayerID:   p2.ID,
+			Scores:     []int32{0, 20500, 16400, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			LeagueID:   l1.ID,
+			LeagueName: l1.Name,
+			LeagueYear: l1.Year,
+			PlayerID:   p2.ID,
+			Scores:     []int32{0, 5100, 20900, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+	}
+	if !reflect.DeepEqual(expected, scores) {
+		t.Errorf("player scores not as expected, got: %v", scores)
+	}
+}
+
+func TestGetTopScores(t *testing.T) {
+	ctx := context.Background()
+
+	l := getLeague()
+	if err := testDB.AddLeague(ctx, l); err != nil {
+		t.Fatalf("error adding league: %v", err)
+	}
+	// Cleanup after the test
+	defer func() {
+		testDB.ArchiveLeague(ctx, l.ID)
+	}()
+
+	p1 := getPlayer()
+	p2 := getPlayer()
+	p3 := getPlayer()
+	p4 := getPlayer()
+	p5 := getPlayer()
+	p6 := getPlayer()
+	p7 := getPlayer()
+	p8 := getPlayer()
+	for _, p := range []*model.Player{p1, p2, p3, p4, p5, p6, p7, p8} {
+		if err := testDB.SavePlayer(ctx, p); err != nil {
+			t.Fatalf("error adding player: %v", err)
+		}
+	}
+
+	w1 := []model.PlayerScore{
+		{PlayerID: p1.ID, Score: 20000},
+		{PlayerID: p2.ID, Score: 19000},
+		{PlayerID: p3.ID, Score: 22000},
+		{PlayerID: p4.ID, Score: 18000},
+		{PlayerID: p5.ID, Score: 17000},
+		{PlayerID: p6.ID, Score: 16000},
+		{PlayerID: p7.ID, Score: 21000},
+		{PlayerID: p8.ID, Score: 19750},
+	}
+	if err := testDB.SavePlayerScores(ctx, l.ID, 1, w1); err != nil {
+		t.Fatalf("error saving w1 scores: %v", err)
+	}
+
+	scores, err := testDB.GetTopScores(ctx, l.ID, 1)
+	if err != nil {
+		t.Fatalf("error getting top scores: %v", err)
+	}
+
+	expectedOrder := []string{p3.ID, p7.ID, p1.ID, p8.ID, p2.ID}
+	if len(expectedOrder) != len(scores) {
+		t.Fatalf("wrong number of responses, expected %d, got %d", len(expectedOrder), len(scores))
+	}
+	for i := range expectedOrder {
+		if expectedOrder[i] != scores[i].PlayerID {
+			t.Errorf("expected player %d  - '%s' but got '%s'", i, expectedOrder[i], scores[i].PlayerID)
+		}
+	}
+}
+
 func TestConvertYahooPlayerIDs(t *testing.T) {
 	ctx := context.Background()
 

@@ -115,6 +115,10 @@ func (a *yahooAdapter) getStarters(ctx context.Context, l *model.League) ([]mode
 	return a.c.yahoo.GetStarters(httpClient, l.ExternalID)
 }
 
+func (a *yahooAdapter) getLeagueStandings(ctx context.Context, leagueID string) ([]model.LeagueStanding, error) {
+	return nil, errors.New("getLeagueStanding not supported for yahoo leagues")
+}
+
 func parseID(id string) int {
 	result := 0
 	m := teamIDRegex.FindStringSubmatch(id)

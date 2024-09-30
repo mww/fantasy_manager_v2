@@ -17,6 +17,7 @@ type DB interface {
 	SavePlayerScores(ctx context.Context, leagueID int32, week int, scores []model.PlayerScore) error
 	// Look up the scores for a specific player regardless of league or week.
 	GetPlayerScores(ctx context.Context, playerID string) ([]model.SeasonScores, error)
+	GetTopScores(ctx context.Context, leagueID int32, week int) ([]model.PlayerScore, error)
 
 	// Lists the 20 most recent rankings in the system. The most recent ranking is returned first.
 	// Only the ranking metadata, the ID and date, are returned. The actual ranking data is returned
