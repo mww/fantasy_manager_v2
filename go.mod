@@ -9,7 +9,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/testcontainers/testcontainers-go v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.33.0
-	github.com/unrolled/render v1.6.1
+	github.com/unrolled/render v1.7.0
 	golang.org/x/oauth2 v0.23.0
 )
 
