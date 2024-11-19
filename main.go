@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/itbasis/go-clock"
@@ -90,10 +91,13 @@ func main() {
 	wg := &sync.WaitGroup{}
 
 	// Setup a handler to catch ctrl-c signals and properly shutdown everything.
-	intChannel := make(chan os.Signal, 2)
-	signal.Notify(intChannel, os.Interrupt)
+	// Also catch SIGTERM since that is what docker will send when it wants the
+	// container to shutdown.
+	sigChannel := make(chan os.Signal, 2)
+	signal.Notify(sigChannel, os.Interrupt)
+	signal.Notify(sigChannel, syscall.SIGTERM)
 	go func() {
-		<-intChannel
+		<-sigChannel
 		close(shutdown)
 
 		if err := waitTimeout(wg, 10*time.Second); err != nil {
