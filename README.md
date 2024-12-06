@@ -1,3 +1,11 @@
+# Fantasy Manager
+
+This is a program I have written mostly for myself to help me generate custom power rankings for my various fantasy football leagues. Why? Because power rankings are fun. They can be completely wrong, but if they give people in the league something to complain about, or something to rally around and generate more conversations then they have done their job.
+
+If this is useful to anyone else that is great, but it is built around my own needs.
+
+# Development
+
 To create a postgres DB in docker
 
 Note: this changes the default port to avoid conflicts with other projects.
