@@ -7,7 +7,7 @@ require (
 	github.com/itbasis/go-clock v1.6.0
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/joho/godotenv v1.5.1
-	github.com/testcontainers/testcontainers-go v0.34.0
+	github.com/testcontainers/testcontainers-go v0.35.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.34.0
 	github.com/unrolled/render v1.7.0
 	golang.org/x/oauth2 v0.25.0
