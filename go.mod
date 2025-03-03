@@ -1,7 +1,6 @@
 module github.com/mww/fantasy_manager_v2
 
 go 1.23
-
 require (
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/itbasis/go-clock v1.6.0
@@ -10,7 +9,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.35.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.35.0
 	github.com/unrolled/render v1.7.0
-	golang.org/x/oauth2 v0.26.0
+	golang.org/x/oauth2 v0.27.0
 )
 
 require (
