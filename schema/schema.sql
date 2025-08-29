@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS players (
     updated           timestamp with time zone,
     fts_player        tsvector GENERATED ALWAYS AS (to_tsvector(
         'english', name_first || ' ' || name_last || ' ' || coalesce(nickname1, '')
-    )) STORED
+    )) STORED,
+    tank01_id         varchar(16)
 );
 
 CREATE TABLE IF NOT EXISTS player_changes (

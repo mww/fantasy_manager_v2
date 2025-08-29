@@ -13,6 +13,7 @@ const (
 type Player struct {
 	ID              string
 	YahooID         string
+	Tank01ID        string
 	FirstName       string
 	LastName        string
 	Nickname1       string
