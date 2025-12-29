@@ -5,7 +5,7 @@ go 1.25.5
 require (
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/itbasis/go-clock v1.6.0
-	github.com/jackc/pgx/v5 v5.7.6
+	github.com/jackc/pgx/v5 v5.8.0
 	github.com/joho/godotenv v1.5.1
 	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.40.0
