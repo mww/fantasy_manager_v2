@@ -13,7 +13,7 @@ func getRouter(ctrl controller.C, render *render.Render) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+	r.Use(middleware.ClientIPFromXFF("10.0.0.0/8", "192.168.0.0/16"))
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
